@@ -1,0 +1,57 @@
+\documentclass[10pt]{article}
+
+\usepackage{enumerate,graphicx}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\newcommand{\bi}{\begin{itemize}}
+\newcommand{\ei}{\end{itemize}}
+
+\section*{Algorithmic Aspects of Playlist Creation}
+
+\bigskip
+
+{\bf Degree:} MEng. Computer Science \\
+\\ 
+{\bf Student:} John Jennings  \hspace{3mm} {\bf Supervisor:} Iain Stewart \\
+\\ 
+{\bf Description:} \vspace{1mm} \\
+Generative models, particularly Generative Adversarial Networks (GANs), are important tools in machine learning, seeing recent success in a wide variety of applications, from synthesizing realistic images of human faces and house interiors, to transforming photos from summer to winter and night to day. In a GAN, the learning task is modelled as a game in which a generator network aims to realistically mimic samples from some high-dimensional distribution. A discriminator network is then tasked with determining if a given sample is produced by the original distribution or the generator. Both networks are trained in tandem, with an improvement in one network encouraging an improvement in the other. Within the information security sector, GANs have been used for learning novel encryption schemes, modelling password distributions, and steganography techniques for hiding information within an image. This project will expand upon current research, experimenting with new applications of cutting-edge machine learning techniques, such as developing a steganographic algorithm that hides information within text instead of images or using side-information to improve a password modelling network.\\
+\\
+{\bf Preliminary Preparation:}
+  \begin{itemize}
+    \item Collection and analysis of tracks and associated audio features
+    \item Analysis of popular playlists and the audio features of their constituent tracks 
+    \item Survey of similarity search and pathfinding techniques on large data sets
+  \end{itemize}
+{\bf Minimum Objectives:}
+  \begin{itemize}  
+    \item System will efficiently handle queries for playlists of 15 tracks from a database of 1,000 items
+    \item Implementation and analysis of a variety of algorithms and data structures
+    \item System is accessible through a command line interface  
+  \end{itemize}
+{\bf Intermediate Objectives:}
+  \begin{itemize}  
+    \item System will efficiently handle queries for playlists of 25 tracks from a database of 10,000 items
+    \item Implementation and analysis of approximation algorithms and other methods of reducing processing time for large data sets
+    \item System will allow for weightings of each audio feature to be changed to fit user preference
+    \item User will be able to log in to Spotify through a web interface and save generated playlists to their account
+  \end{itemize}
+{\bf Advanced Objectives:}
+  \begin{itemize}  
+    \item System will efficiently handle queries for playlists of 100 tracks from a database of 1,000,000 items
+    \item Some form of mathematical bound will be placed on the efficiency/accuracy of the algorithms implemented
+    \item System will allow for weightings of each audio feature to change dynamically within a playlists for increased customisability 
+  \end{itemize}
+{\bf References:}
+  \begin{itemize}  
+    \item J. Brownlee, {\it Clever Algorithms: Nature-Inspired Programming Recipes} (2012).
+    \item P. Zezula, G. Amato, V. Dohnal and M. Batko, {\it Similarity Search: The Metric Space Approach}, Springer (2010)
+    \item C. Sommer, {\it Approximate Shortest Path and Distance Queries in Networks}, (2010)
+    \item A. Rajaraman, J. Leskovec, and J. Ullman, {\it Mining of Massive Datasets}, (2010)
+
+  \end{itemize}
+
+\end{document} 
