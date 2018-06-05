@@ -1,0 +1,47 @@
+
+@Comment concept of intentional/unintentional attacks. Trains an ngram model + SVM classifier on clean/stegged text. Attacked tlex using its lack of context awareness. 84.9% accuracy on detecting stegged text.
+@inproceedings{lexsteg,
+  title={Attacks on lexical natural language steganography systems},
+  author={Taskiran, Cuneyt M and Topkara, Umut and Topkara, Mercan and Delp, Edward J},
+  booktitle={Security, Steganography, and Watermarking of Multimedia Contents VIII},
+  volume={6072},
+  pages={607209},
+  year={2006},
+  organization={International Society for Optics and Photonics}
+}
+
+
+@Comment tyrannosaurus lex. http://web.mit.edu/keithw/tlex/ synonym based steg. Has perl implementation. Watermarking of playboy articles. Suggests WordNet to create synonym tables. Naive method suffers from one-way synonyms i.e. too -> also "the bed was too big". Only 30% of words are deemed 'useful'. Does not take context into consideration.
+@misc{tlex,
+  title={Lexical steganography through adaptive modulation of the word choice hash. Secondary education at the Illinois Mathematics and Science Academy, January},
+  author={Winstein, K},
+  year={1999}
+}
+
+@Comment uses ascii value of message to select synonym for replacement. Seeems to confuse the meaning of 'cover text'
+@inproceedings{lunabel,
+  title={Exploiting linguistic features in lexical steganography: design and proof-of-concept implementation},
+  author={Chand, Vineeta and Orgun, C Orhan},
+  booktitle={System Sciences, 2006. HICSS'06. Proceedings of the 39th Annual Hawaii International Conference on},
+  volume={6},
+  pages={126b--126b},
+  year={2006},
+  organization={IEEE}
+}
+
+@Comment Encodes using word ordering. Honestly seems a bit rubbish.
+@article{chang2012secret,
+  title={The secret’s in the word order: Text-to-text generation for linguistic steganography},
+  author={Chang, Ching-Yun and Clark, Stephen},
+  journal={Proceedings of COLING 2012},
+  pages={511--528},
+  year={2012}
+}
+
+@Comment uses enron email + twitter datasets. Maps bit blocks to sets of words. e.g. 00 -> {big, potato, orange} etc. Weakness in that capacity is constant throughout encoding. E.g. "the big large dog ate food" HAS to store as much data as "3-Sat is an NP-Hard decision problem". Trained their own word embeddings for some reason. Forces user to use whatever cover text it generates - often pretty rubbish. Does not use a GAN.
+@article{lstm,
+  title={Generating Steganographic Text with LSTMs},
+  author={Fang, Tina and Jaggi, Martin and Argyraki, Katerina},
+  journal={arXiv preprint arXiv:1705.10742},
+  year={2017}
+}

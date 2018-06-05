@@ -14,7 +14,6 @@ credentials.py
 *.fls
 *.bbl
 *.bcf
-*.bib
 *.blg
 *.out
 *.run.xml
