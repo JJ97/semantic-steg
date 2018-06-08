@@ -1,6 +1,8 @@
 /3yp/*
 /books/*
 /ignore/*
+/datasets/*
+cache/
 */libs/*
 code/server/static/libs/*
 mil.csv
