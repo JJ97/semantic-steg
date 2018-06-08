@@ -12,6 +12,8 @@
 
 \begin{document}
 
+
+
 \newcommand{\bi}{\begin{itemize}}
 \newcommand{\ei}{\end{itemize}}
 
@@ -33,21 +35,21 @@ Generative models, particularly Generative Adversarial Networks (GANs), are impo
   \end{itemize}
 {\bf Minimum Objectives:}
   \begin{itemize}  
-    \item Simple autoencoder-inspired network takes cover text and message as input. Encoder aims to embed message within cover text, decoder aims to extract the embedded message. Loss function is a combination of reconstruction error of decoder with respect to original message and reconstruction error of encoder with respect to the cover text, where `reconstruction error' takes into account semantic coherence through the use of pre-trained word embeddings.
-    \item Comparison of this network against existing methods e.g. TLex, LUNABEL.
-    \item Users will be able to interact with the system through a web interface, embedding their own message into a cover text of their choice.
+    \item Implement a sequence-to-sequence model in which a slight change to the latent representation of an input sentence will result in a semantically similar sentence as output. 
   \end{itemize}
 {\bf Intermediate Objectives:}
   \begin{itemize}  
-    \item Encoder output will be robust to random deletion of words/sentences i.e. hidden message can still be decoded from partial output.
-    \item Encoder will be robust to an adversarial network attempting to identify if the output text contains a hidden message.
-    \item Encoder will additionally take a random key as input. Will be robust to an adversarial network attempting to decode the hidden message without knowledge of the key.
+    \item Tailor the encoder-decoder architecture to improve the quality of the decoded output, such as with an adversarial component, residual-connections, regularisation, and tuning of the number of layers/parameters
+    \item Investigate a method of modifying the latent representation to store a hidden message.
+    \item Comparison of this network against existing methods, e.g. TLex, LUNA...
+    \item Investigate/collect results on robustness to random deletion, adversarial attacks etc.\
   \end{itemize}
 {\bf Advanced Objectives:}
   \begin{itemize}  
-    \item Cryptanalysis of system to give some theoretical bounds on the level of security that is provided e.g. Does partial knowledge of the key yield a partially decoded message? How much information can be successfully hidden within a typical sentence?
+    \item Cryptanalysis of system to give some theoretical bounds on the level of security that is provided e.g.\ Does partial knowledge of the key yield a partially decoded message? How much information can be successfully hidden within a typical sentence?
+    \item Deploy the model and create a front-end, making it easy to use in inference (hide/reveal messages on new texts).
   \end{itemize}
-
+\newpage
 \nocite{*}
 \bibliography{../bib}
 \end{document} 
