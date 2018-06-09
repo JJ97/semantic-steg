@@ -11,6 +11,7 @@ from torch import optim
 import torch.nn.functional as F
 
 from lang import Language
+from consts import *
 
 # Turn a Unicode string to plain ASCII, thanks to
 # http://stackoverflow.com/a/518232/2809427
@@ -65,6 +66,8 @@ def read_file(file, include_phrases, suffix="", reverse=False):
                     filtered_pairs.append(pair)
         pairs = filtered_pairs
 
+    print("Counted: {} pairs".format(len(pairs)))
+
     for pair in pairs:
         input_lang.add_sentence(pair[0])
         output_lang.add_sentence(pair[1])
@@ -80,5 +83,5 @@ def read_file(file, include_phrases, suffix="", reverse=False):
 
     return input_lang, output_lang, pairs
 
-def readCache(file):
+def read_cache(file):
     return pickle.load(open("cache/{}.p".format(file), 'rb'))
