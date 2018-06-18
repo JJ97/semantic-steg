@@ -27,7 +27,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if USE_CACHE:
     input_lang, output_lang, pairs = (read_cache(c) for c in CACHE)
 else:
-    input_lang, output_lang, pairs = read_file(FILE, INCLUDE_PHRASES, suffix='he is')
+    input_lang, output_lang, pairs = read_file(FILE, INCLUDE_PHRASES, suffix='auto')
 
 random.shuffle(pairs)
 train_set = pairs[:int(0.8 * len(pairs))]
@@ -167,7 +167,7 @@ def evaluate_randomly(encoder, decoder, n=10):
         print('<', output_sentence)
         print('')
 
-hidden_size = 256
+hidden_size = 512
 encoder1 = Encoder(input_lang.n_words, hidden_size, device).to(device)
 attn_decoder1 = Decoder(hidden_size, output_lang.n_words, device, dropout_p=0.1).to(device)
 

@@ -46,3 +46,53 @@
   journal={arXiv preprint arXiv:1705.10742},
   year={2017}
 }
+
+@Comment States that encoded vector is a bottleneck. Instead encoder outputs a sequence of vectors and decoder chooses which vectors to use. Potential use for lexsteg in determining words that have a large capacity? Potentially encode word to sequence of 'potential embedding vectors', then decode with message to original input + message? Need to consider gap between output word2vec and actual words. i.e. need to include gradient of vec -> closest word or training will be dodgy. Can we use the same annotation weight forumula? uses a bi-directional rnn to get hidden states in both directions. Look up beam search. 
+@article{seq2seq,
+  title={Neural machine translation by jointly learning to align and translate},
+  author={Bahdanau, Dzmitry and Cho, Kyunghyun and Bengio, Yoshua},
+  journal={arXiv preprint arXiv:1409.0473},
+  year={2014}
+}
+
+@article{seq2seq2,
+  title={Multi-task sequence to sequence learning},
+  author={Luong, Minh-Thang and Le, Quoc V and Sutskever, Ilya and Vinyals, Oriol and Kaiser, Lukasz},
+  journal={arXiv preprint arXiv:1511.06114},
+  year={2015}
+}
+
+@Comment Yelp corpus. Really interesting idea but not sure why they give the discriminator the hidden state instead of the output and english is really poor
+@article{advseq2seq,
+  title={Sentiment Transfer using Seq2Seq Adversarial Autoencoders},
+  author={Singh, Ayush and Palod, Ritu},
+  journal={arXiv preprint arXiv:1804.04003},
+  year={2018}
+}
+
+@inproceedings{yass,
+  title={YASS: Yet another steganographic scheme that resists blind steganalysis},
+  author={Solanki, Kaushal and Sarkar, Anindya and Manjunath, BS},
+  booktitle={International Workshop on Information Hiding},
+  pages={16--31},
+  year={2007},
+  organization={Springer}
+}
+
+@article{gan,
+  title={Steganographic generative adversarial networks},
+  author={Volkhonskiy, Denis and Nazarov, Ivan and Borisenko, Boris and Burnaev, Evgeny},
+  journal={arXiv preprint arXiv:1703.05502},
+  year={2017}
+}
+
+@article{twitter,
+  title={Avoiding detection on twitter: embedding strategies for linguistic steganography},
+  author={Wilson, Alex and Ker, Andrew D},
+  journal={Electronic Imaging},
+  volume={2016},
+  number={8},
+  pages={1--9},
+  year={2016},
+  publisher={Society for Imaging Science and Technology}
+}

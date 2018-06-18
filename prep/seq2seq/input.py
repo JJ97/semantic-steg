@@ -44,6 +44,7 @@ def read_file(file, include_phrases, suffix="", reverse=False):
 
     # Split every line into pairs and normalize
     pairs = [[normalize_string(s) for s in l.split('\t')] for l in lines]
+    pairs = [[p[0], p[0]] for p in pairs]
 
     lang1, lang2 = tuple(file.split("/")[0].split('-'))
 
@@ -51,10 +52,10 @@ def read_file(file, include_phrases, suffix="", reverse=False):
     if reverse:
         pairs = [list(reversed(p)) for p in pairs]
         input_lang = Language(lang1)
-        output_lang = Language(lang2)
+        output_lang = Language(lang1)
     else:
         input_lang = Language(lang2)
-        output_lang = Language(lang1)
+        output_lang = Language(lang2)
 
     print("Counting words...")
 
@@ -70,7 +71,7 @@ def read_file(file, include_phrases, suffix="", reverse=False):
 
     for pair in pairs:
         input_lang.add_sentence(pair[0])
-        output_lang.add_sentence(pair[1])
+        output_lang.add_sentence(pair[0])
 
     print("Counted words:")
     print(input_lang.name, input_lang.n_words)
