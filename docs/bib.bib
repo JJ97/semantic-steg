@@ -62,7 +62,7 @@
   year={2015}
 }
 
-@Comment Yelp corpus. Really interesting idea but not sure why they give the discriminator the hidden state instead of the output and english is really poor
+@Comment Yelp corpus. Really interesting idea but not sure why they give the discriminator the hidden state instead of the output, english is quite poor and only discussion of accuracy instead of f1
 @article{advseq2seq,
   title={Sentiment Transfer using Seq2Seq Adversarial Autoencoders},
   author={Singh, Ayush and Palod, Ritu},
@@ -70,6 +70,7 @@
   year={2018}
 }
 
+@Comment Focus on image steg with JPEG. Traditional methods relying on hiding in DCT coeffs can be discovered by checking histograms. New methods of steganalysis use supervised learning. Hides data in random positions, needs error correction to compensate. Introduces idea of ε-security. Discusses high embedding strength i.e. embedding across the entire image so that cover image statistics cannot be derived vs randomised hiding.
 @inproceedings{yass,
   title={YASS: Yet another steganographic scheme that resists blind steganalysis},
   author={Solanki, Kaushal and Sarkar, Anindya and Manjunath, BS},
@@ -79,6 +80,7 @@
   organization={Springer}
 }
 
+@Comment seems to just generate cover images and then apply a standard stego algo
 @article{gan,
   title={Steganographic generative adversarial networks},
   author={Volkhonskiy, Denis and Nazarov, Ivan and Borisenko, Boris and Burnaev, Evgeny},
@@ -95,4 +97,34 @@
   pages={1--9},
   year={2016},
   publisher={Society for Imaging Science and Technology}
+}
+
+@article{doc2vec,
+  title={An empirical evaluation of doc2vec with practical insights into document embedding generation},
+  author={Lau, Jey Han and Baldwin, Timothy},
+  journal={arXiv preprint arXiv:1607.05368},
+  year={2016}
+}
+
+@inproceedings{phrases,
+  title={Distributed representations of words and phrases and their compositionality},
+  author={Mikolov, Tomas and Sutskever, Ilya and Chen, Kai and Corrado, Greg S and Dean, Jeff},
+  booktitle={Advances in neural information processing systems},
+  pages={3111--3119},
+  year={2013}
+}
+
+@article{paragraphs,
+  title={Document embedding with paragraph vectors},
+  author={Dai, Andrew M and Olah, Christopher and Le, Quoc V},
+  journal={arXiv preprint arXiv:1507.07998},
+  year={2015}
+}
+
+@inproceedings{seqgan,
+  title={SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient.},
+  author={Yu, Lantao and Zhang, Weinan and Wang, Jun and Yu, Yong},
+  booktitle={AAAI},
+  pages={2852--2858},
+  year={2017}
 }
