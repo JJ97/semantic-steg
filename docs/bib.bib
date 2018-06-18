@@ -88,7 +88,8 @@
   year={2017}
 }
 
-@article{twitter,
+@Comment who couldve guessed that the only paper that gives real information is from Oxford? Argues that steganalysis attacks on cover generation are pointless as the generation systems can be defeated by just looking at them. Most papers have litte mention of the security provided and instead look at just syntactic/semantic properties. Performed their own steganalysis and showed that individual tweet = good but a couple of samples and it becomes easy to detect. Defines 'source coding' LOOK AT J. Fridrich, Steganography in digital media: principles, algorithms, and applications. Cambridge University Press, 2009. as something that solves the 'selection channel problem' i.e. some words have better capacity. Uses PPDB for transformations. Might be useful. Really like their user interface -> user gives cover text, generates many potential stegotexts and then user selects best. Could even train network on user input to give better stegotexts over time. Capacity of stegosystem is log2 of number of paraphrases/synonyms. May want to start off by analysing capacity of our datasets with respect to word2vec synonyms. Looks at measuring distortion with respect to binary, proabilistic, edit distance and feature vectors. Dataset of 21M tweets!!!! Square root law of steganography. 
+@article{covertweet,
   title={Avoiding detection on twitter: embedding strategies for linguistic steganography},
   author={Wilson, Alex and Ker, Andrew D},
   journal={Electronic Imaging},
@@ -99,6 +100,11 @@
   publisher={Society for Imaging Science and Technology}
 }
 
+Honestly just read all the papers from that oxford one and all the ones that cite it
+A. Wilson, P. Blunsom, and A. D. Ker, “Linguistic steganography on twitter: hierarchical language modeling with manual interaction,” in IS&T/SPIE Electronic Imaging, pp. 201–217, International Society
+for Optics and Photonics, 2014.
+
+@Comment 
 @article{doc2vec,
   title={An empirical evaluation of doc2vec with practical insights into document embedding generation},
   author={Lau, Jey Han and Baldwin, Timothy},
