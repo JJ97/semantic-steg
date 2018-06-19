@@ -100,11 +100,8 @@
   publisher={Society for Imaging Science and Technology}
 }
 
-Honestly just read all the papers from that oxford one and all the ones that cite it
-A. Wilson, P. Blunsom, and A. D. Ker, “Linguistic steganography on twitter: hierarchical language modeling with manual interaction,” in IS&T/SPIE Electronic Imaging, pp. 201–217, International Society
-for Optics and Photonics, 2014.
-
-@Comment 
+@Comment READ UP ON DBOW + DMPV
+@Comment Apparently original paper was hard to reproduce. More useful to us to think of them as paragraph/sentence/tweet vectors. Finds that dbow (distributed bag of words -> each document has a token READ UP ON WHEN YOU HAVE INTERNET) is better than dmpv (document vector + concatenated , whatever that is. Word2Vec can be improved by using negative sampling (maximising dot prod of w against nearby words and minimising against some randomly selected non-context words) instead of softmax. skipgram -> input word, output nearby word in window.  cbow -> input is sum of words, output context word. 
 @article{doc2vec,
   title={An empirical evaluation of doc2vec with practical insights into document embedding generation},
   author={Lau, Jey Han and Baldwin, Timothy},
@@ -133,4 +130,44 @@ for Optics and Photonics, 2014.
   booktitle={AAAI},
   pages={2852--2858},
   year={2017}
+}
+
+@article{synfreq,
+  title={Linguistic steganalysis using the features derived from synonym frequency},
+  author={Xiang, Lingyun and Sun, Xingming and Luo, Gang and Xia, Bin},
+  journal={Multimedia tools and applications},
+  volume={71},
+  number={3},
+  pages={1893--1911},
+  year={2014},
+  publisher={Springer}
+}
+
+@inproceedings{covertweet1,
+  title={Linguistic steganography on twitter: hierarchical language modeling with manual interaction},
+  author={Wilson, Alex and Blunsom, Phil and Ker, Andrew D},
+  booktitle={Media Watermarking, Security, and Forensics 2014},
+  volume={9028},
+  pages={902803},
+  year={2014},
+  organization={International Society for Optics and Photonics}
+}
+
+@inproceedings{attacks,
+  title={Attacks on lexical natural language steganography systems},
+  author={Taskiran, Cuneyt M and Topkara, Umut and Topkara, Mercan and Delp, Edward J},
+  booktitle={Security, Steganography, and Watermarking of Multimedia Contents VIII},
+  volume={6072},
+  pages={607209},
+  year={2006},
+  organization={International Society for Optics and Photonics}
+}
+
+@Comment NEW REFERENCE in simmons 375 - the original paper defining the problem of steganography as two prisoners communicating through a warden. 
+@Comment CHAPTER 12: STEGANOGRAPHY Main requirement is undetectibility -> no algo exists to detect if cover contains message, doesnt matter that you cant decode, detection = broken. Slightly looser constraints than imperceptibility needed for watermarking i.e. human would be able to tell there was a change but it doesnt matter since they will never see the original cover. Additionally looser constraint to watermarking in that alice can choose a different cover if it doesnt work. Sidenote: do we include spelling errors + abbreviations? would increase number of synonyms massively but probably also require custom word embeddings. Types of warden: passive -> can only prevent or permit, not modify. active -> slightly modifies all comms just in case there is a stegotext. malicious -> wardens targets this stegosystem specifically. Might be worth modelling adversarial training in these steps. I.e. yes/no discriminator, adversary changes message before decoding, says that linguistic steg is 'less developed'. Cachin analyses wardens performance with regards to hypothesis testing. Beyond this they talk a lot about steg specific to jpeg.
+@book{cox,
+  title={Digital watermarking and steganography},
+  author={Cox, Ingemar and Miller, Matthew and Bloom, Jeffrey and Fridrich, Jessica and Kalker, Ton},
+  year={2007},
+  publisher={Morgan Kaufmann}
 }
