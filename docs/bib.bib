@@ -1,16 +1,4 @@
 
-@Comment concept of intentional/unintentional attacks. Trains an ngram model + SVM classifier on clean/stegged text. Attacked tlex using its lack of context awareness. 84.9% accuracy on detecting stegged text.
-@inproceedings{lexsteg,
-  title={Attacks on lexical natural language steganography systems},
-  author={Taskiran, Cuneyt M and Topkara, Umut and Topkara, Mercan and Delp, Edward J},
-  booktitle={Security, Steganography, and Watermarking of Multimedia Contents VIII},
-  volume={6072},
-  pages={607209},
-  year={2006},
-  organization={International Society for Optics and Photonics}
-}
-
-
 @Comment tyrannosaurus lex. http://web.mit.edu/keithw/tlex/ synonym based steg. Has perl implementation. Watermarking of playboy articles. Suggests WordNet to create synonym tables. Naive method suffers from one-way synonyms i.e. too -> also "the bed was too big". Only 30% of words are deemed 'useful'. Does not take context into consideration.
 @inproceedings{tlex,
   title={Lexical steganography through adaptive modulation of the word choice hash},
@@ -124,6 +112,7 @@
   year={2015}
 }
 
+@Comment Generative RNNs suffer from exposure bias -> when training, output relies on true input but when generating it relies on previous output -> output degrades over time. Scheduled sampling helps this by feeding in output into input during training. Though Huszar shows that it doesnt work very well. Task specific loss like those used in machine translation can also help by modelling the loss on the entire sequence instead of on transitions. GANs are hard to train on discrete problems as they learn by making slight changes e.g. cant have dog+epsilon. Also hard to define loss on partially generated sequences. Seems to contradict previous point about loss on entire seq being good?? Uses monte carlo tree search on partially finished sequences to get an estimate of discriminator output at that time step. Main issue with a simple GAN for our purpose is that it would create its own cover text, autoencoder would be easier to get to transform a given cover text, i think anyway.
 @inproceedings{seqgan,
   title={SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient.},
   author={Yu, Lantao and Zhang, Weinan and Wang, Jun and Yu, Yong},
@@ -153,6 +142,7 @@
   organization={International Society for Optics and Photonics}
 }
 
+@Comment concept of intentional/unintentional attacks. Trains an ngram model + SVM classifier on clean/stegged text. Attacked tlex using its lack of context awareness. 84.9% accuracy on detecting stegged text.
 @inproceedings{attacks,
   title={Attacks on lexical natural language steganography systems},
   author={Taskiran, Cuneyt M and Topkara, Umut and Topkara, Mercan and Delp, Edward J},

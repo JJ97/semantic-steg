@@ -69,9 +69,12 @@ def read_file(file, include_phrases, suffix="", reverse=False):
 
     print("Counted: {} pairs".format(len(pairs)))
 
-    for pair in pairs:
-        input_lang.add_sentence(pair[0])
-        output_lang.add_sentence(pair[0])
+
+    sentences = {s[0] for s in pairs}
+
+    for s in sentences:
+        input_lang.add_sentence(s)
+        output_lang.add_sentence(s)
 
     print("Counted words:")
     print(input_lang.name, input_lang.n_words)

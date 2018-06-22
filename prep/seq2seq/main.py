@@ -27,7 +27,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if USE_CACHE:
     input_lang, output_lang, pairs = (read_cache(c) for c in CACHE)
 else:
-    input_lang, output_lang, pairs = read_file(FILE, INCLUDE_PHRASES, suffix='auto')
+    input_lang, output_lang, pairs = read_file(FILE, INCLUDE_PHRASES, suffix='i')
 
 random.shuffle(pairs)
 train_set = pairs[:int(0.8 * len(pairs))]
@@ -35,6 +35,8 @@ test_set = pairs[int(0.8 * len(pairs)):]
 
 validation_set = train_set[int(0.8 * len(train_set)):]
 train_set = train_set[:int(0.8 * len(train_set))]
+
+print("{} train   {} validation    {} test".format(len(train_set), len(validation_set), len(test_set)))
 
 
 def pair2tensors(pair):
