@@ -88,8 +88,8 @@
   publisher={Society for Imaging Science and Technology}
 }
 
-@Comment READ UP ON DBOW + DMPV
-@Comment Apparently original paper was hard to reproduce. More useful to us to think of them as paragraph/sentence/tweet vectors. Finds that dbow (distributed bag of words -> each document has a token READ UP ON WHEN YOU HAVE INTERNET) is better than dmpv (document vector + concatenated , whatever that is. Word2Vec can be improved by using negative sampling (maximising dot prod of w against nearby words and minimising against some randomly selected non-context words) instead of softmax. skipgram -> input word, output nearby word in window.  cbow -> input is sum of words, output context word. 
+@Comment Skipgram = 1 word predicts surrounding words, CBOW = opposite
+@Comment Apparently original paper was hard to reproduce. More useful to us to think of them as paragraph/sentence/tweet vectors. Finds that dbow (distributed bag of words, train document id to predict words in doc) WHY IS DBOW MORE SIMILAR TO SKIPGRAM THAN CBOW is better than dmpv (document vector + concatenated context words predicts single word). Word2Vec can be improved by using negative sampling (maximising dot prod of w against nearby words and minimising against some randomly selected non-context words) instead of softmax. skipgram -> input word, output nearby word in window.  cbow -> input is sum of words, output context word. 
 @article{doc2vec,
   title={An empirical evaluation of doc2vec with practical insights into document embedding generation},
   author={Lau, Jey Han and Baldwin, Timothy},
