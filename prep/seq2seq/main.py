@@ -121,6 +121,8 @@ def train_iterations(encoder, decoder, n_iters, print_every=1000, plot_every=100
             print('<', output_sentence)
             print('')
 
+        random.shuffle(train_set)
+
 
     show_plot(plot_losses)
 

@@ -97,6 +97,7 @@
   year={2016}
 }
 
+@Comment suggests improvements to skipgram w2v with the use of negative sampling. Also looks at identifying and learning phrases as well as words. Subsampling frequent words improves results. Hierarchical softmax uses a tree to approximate full softmax, need to evaluate log(w) output nodes instead of all w. Identify phrases simply by comparing tf of bigram vs tf of their unigrams. Code is available online!! Is it worth training my own word2vec? If there is a big enough dataset, I would argue yes.
 @inproceedings{phrases,
   title={Distributed representations of words and phrases and their compositionality},
   author={Mikolov, Tomas and Sutskever, Ilya and Chen, Kai and Corrado, Greg S and Dean, Jeff},
