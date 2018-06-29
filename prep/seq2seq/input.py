@@ -80,10 +80,10 @@ def read_file(file, include_phrases, suffix="", reverse=False):
     print(input_lang.name, input_lang.n_words)
     print(output_lang.name, output_lang.n_words)
 
-    print("Dumping")
-    pickle.dump(input_lang, open("cache/{}{}.p".format(input_lang.name, suffix), 'wb'))
-    pickle.dump(output_lang, open("cache/{}{}.p".format(output_lang.name, suffix), 'wb'))
-    pickle.dump(pairs, open("cache/{}2{}{}.p".format(input_lang.name, output_lang.name, suffix), 'wb'))
+    # print("Dumping")
+    # pickle.dump(input_lang, open("cache/{}{}.p".format(input_lang.name, suffix), 'wb'))
+    # pickle.dump(output_lang, open("cache/{}{}.p".format(output_lang.name, suffix), 'wb'))
+    # pickle.dump(pairs, open("cache/{}2{}{}.p".format(input_lang.name, output_lang.name, suffix), 'wb'))
 
     return input_lang, output_lang, pairs
 

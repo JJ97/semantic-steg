@@ -1,8 +1,8 @@
 FILE = 'deu-eng/deu.txt'
 CACHE = ('deu-am', 'eng-am', 'eng2deu-am')
-# INCLUDE_PHRASES = ["i am", 'you are', 'we are', 'they are', 'she is', 'he is']
-INCLUDE_PHRASES = ["i "]
-
+INCLUDE_PHRASES = ["i am", 'you are', 'we are', 'they are', 'she is', 'he is']
+INCLUDE_PHRASES = [""]
+#
 USE_CACHE = 0
 
 SOS_TOKEN = 0

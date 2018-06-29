@@ -36,7 +36,7 @@ test_set = pairs[int(0.8 * len(pairs)):]
 validation_set = train_set[int(0.8 * len(train_set)):]
 train_set = train_set[:int(0.8 * len(train_set))]
 
-print("{} train   {} validation    {} test".format(len(train_set), len(validation_set), len(test_set)))
+print("{} train   {} validation    {} test".format(len(train_set), len(validation_set), len(test_set)), flush=True)
 
 
 def pair2tensors(pair):
@@ -98,7 +98,7 @@ def train_iterations(encoder, decoder, n_iters, print_every=1000, plot_every=100
 
                 print(training_pair[0])
                 print(training_pair[1])
-                print(decode_output(decoder_output))
+                print(decode_output(decoder_output), flush=True)
                 print()
 
             if iter % plot_every == 0:
@@ -171,10 +171,19 @@ def evaluate_randomly(encoder, decoder, n=10):
         print('<', output_sentence)
         print('')
 
-hidden_size = 512
-encoder1 = Encoder(input_lang.n_words, hidden_size, device).to(device)
-attn_decoder1 = Decoder(hidden_size, output_lang.n_words, device, dropout_p=0.1).to(device)
 
-train_iterations(encoder1, attn_decoder1, 100000, print_every=50)
-evaluate(encoder1, attn_decoder1)
+
+if __name__ == '__main__':
+    # Note: You must put all your training code into one function rather than in the global scope
+    #       (this is good practice anyway).
+    #       Subsequently you must call the set_start_method and your main function from inside this
+    #       if-statement. If you don't do that, each worker will attempt to run all of your training
+    #       code and everything will go very wild and very wrong.
+    torch.multiprocessing.set_start_method('forkserver')
+    hidden_size = 512
+    encoder1 = Encoder(input_lang.n_words, hidden_size, device).to(device)
+    attn_decoder1 = Decoder(hidden_size, output_lang.n_words, device, dropout_p=0.1).to(device)
+
+    train_iterations(encoder1, attn_decoder1, 100000, print_every=50)
+    evaluate(encoder1, attn_decoder1)
 
