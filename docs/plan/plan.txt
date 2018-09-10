@@ -1,0 +1,57 @@
+Dataset - 
+    Twitter 
+        - Dataset is huge (40GB when compressed)
+        - Character limit should make things easier to train
+            - Could equally cause problems with outputs not being within character limit
+        - Nature of tweets may allow for higher steg capacity
+            - Less technical terms = more synonyms 
+            - Spelling + grammar errors are forgivable (could then encode text using these errors)
+        - Easy to compare against covertweet - imo the best current lexical steg system
+
+Model -
+    - Essentially an autoencoder with an encoder output layer slightly smaller than the input
+        - Input is cover text + message
+            - For sake of simplicity, message will be fixed length
+        - Include some noise on the cover text input
+            - User can then select from multiple outputs
+        - |output| isn't necessarily |cover text|
+            - Allows for encoding through use of adjectives etc.  
+            - Calls for a seq2seq style model
+    Objective 
+        - Output should be (ideally) indistinguishable from input
+            - Can't just look like any old sample from the distribution
+            - Will probably be enforced by an adversarial component
+                - Input cover text + stegotext
+                - Output probability that one text is the original cover
+        - Should be able to losslessly decode message from output
+            - Give this a much higher weighting in the loss function
+            - It doesn't matter if your output is brilliant if it doesn't encode properly
+    Other thoughts
+        - Have the entire message available to the encoder at any time
+            - Let the model decide where to encode things (channel selection problem)
+            - For some reason Fang et al. don't do this (there is probably a good reason that I haven't considered)
+        - Weird airgap between encoder + decoder
+            - i.e. hidden message decoder takes text as input, NOT encoder output activations
+            - May make it more difficult to get nice gradients etc
+
+Implementation plan
+    - Start off with just a tweet autoencoder
+        - Don't worry about the hidden message, just get something that can output a similar looking tweet
+        - May include training a word2vec model on the twitter corpus
+            - Some do already exist though
+    - Then introduce the message
+        - Start off with literally just one bit
+            - If that is all I achieve in a year then its still pretty cool
+            - Could use as a dead mans switch
+    - Frontend
+        - Flask server should be fine
+        - Deploy on heroku?
+            - May have issues with pytorch
+    - Cryptanalysis
+        - Cross that bridge if/when we get to it
+        - Karl has a load of books
+
+        
+    
+        
+        
