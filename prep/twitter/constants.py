@@ -1,0 +1,4 @@
+UNK = 'UNK'
+START = 'START'
+END = "END"
+MAX_LENGTH = 140
