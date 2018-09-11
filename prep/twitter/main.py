@@ -8,6 +8,9 @@ from model.seq2seq.seq2seq import Seq2Seq
 def main():
     pd.options.display.max_colwidth = 150
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    if (torch.cuda.is_available()):
+        print('USING: {}'.format(torch.cuda.get_device_name(0)))
 
     dataset = ThinkNook(from_cache=True)
     embedder = OneHot(dataset.wordlist, device)

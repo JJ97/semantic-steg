@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --job-name=steg
 
-
+module load cuda/9.0  
 source ../steg/bin/activate
 cd prep/twitter
 stdbuf -oL python3 main.py
