@@ -109,7 +109,7 @@ class Seq2Seq:
                 output_sentence = ' '.join(self.output2tweet(decoder_outputs))
                 print('<', output_sentence)
                 print('loss', loss)
-                print('')
+                print(' ', flush=True)
 
 
     def train(self, data, iterations, print_every=1000,
@@ -139,7 +139,7 @@ class Seq2Seq:
 
                     print(' '.join(sample))
                     print(self.output2tweet(decoder_output))
-                    print()
+                    print(' ', flush=True)
 
             self.validate(data, criterion)
 
