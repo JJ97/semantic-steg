@@ -1,5 +1,6 @@
 import torch
 import random
+import gc
 
 from .encoder import Encoder
 from .decoder import Decoder
@@ -70,8 +71,16 @@ class Seq2Seq:
         encoder_optimizer.step()
         decoder_optimizer.step()
 
-        return (loss.item() / input_tensor.size(0)), decoder_outputs
+        avg_loss = loss.item() / input_tensor.size(0)
+        out = self.output2tweet(decoder_outputs)
 
+        del input_tensor
+        del loss
+        del decoder_outputs
+        del encoder_outputs
+
+
+        return avg_loss, out
 
     def validation_iteration(self, input_tensor, criterion):
         encoder_hidden = self.encoder.init_hidden()
@@ -84,8 +93,17 @@ class Seq2Seq:
 
         decoder_outputs, loss = self.get_decoder_output(input_tensor, encoder_outputs, encoder_hidden,
                                                         criterion, use_teacher_forcing=False)
-        return  decoder_outputs, loss
+        
+        out = self.output2tweet(decoder_outputs)
+        l = loss.item()
 
+        del input_tensor
+        del loss
+        del decoder_outputs
+        del encoder_outputs
+
+        return out, loss
+        
     def output2tweet(self, decoder_outputs):
         decoded_words = []
         for decoder_output in decoder_outputs:
@@ -106,14 +124,14 @@ class Seq2Seq:
                 input_tensor = self.embedder.embed(sample)
                 print('>', input_tensor)
                 decoder_outputs, loss = self.validation_iteration(input_tensor, criterion)
-                output_sentence = ' '.join(self.output2tweet(decoder_outputs))
+                output_sentence = decoder_outputs
                 print('<', output_sentence)
                 print('loss', loss)
                 print(' ', flush=True)
 
 
-    def train(self, data, iterations, print_every=1000,
-              learning_rate=0.01, teacher_forcing_ratio=0.5):
+    def train(self, data, iterations, print_every=500,
+              learning_rate=0.0025, teacher_forcing_ratio=0.5):
         criterion = nn.NLLLoss()
 
         encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=learning_rate)
@@ -125,21 +143,32 @@ class Seq2Seq:
             data.train_set = data.train_set.sample(frac=1)
             data.validation_set = data.validation_set.sample(frac=1)
 
-            for sample in data.train_set:
+            for (i, sample) in enumerate(data.train_set):
                 input_tensor = self.embedder.embed(sample)
+
+                if i > 100000:
+                    teacher_forcing_ratio = 0.25
+                    learning_rate = 0.0015
+
+                if i > 200000:
+                    learning_rate = 0.0005
 
                 loss, decoder_output = self.train_iteration(input_tensor, encoder_optimizer, decoder_optimizer,
                         criterion, teacher_forcing_ratio)
                 print_loss_total += loss
 
-                if iteration % print_every == 0:
+                if i % print_every == 0:
                     print_loss_avg = print_loss_total / print_every
                     print_loss_total = 0
-                    print('{0:d} {1:.5f}'.format(iteration, print_loss_avg))
+                    print('{0:d} {1:d} {2:.10f}'.format(iteration, i, print_loss_avg))
 
                     print(' '.join(sample))
-                    print(self.output2tweet(decoder_output))
+                    print(decoder_output)
                     print(' ', flush=True)
+                    gc.collect()
+
+                del input_tensor
+
 
             self.validate(data, criterion)
 

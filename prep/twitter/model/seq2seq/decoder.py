@@ -34,8 +34,7 @@ class Decoder(nn.Module):
         output = self.attn_combine(output).unsqueeze(0)
 
         output = F.relu(output)
-        for i in range(3):
-            output, hidden = self.gru(output, hidden)
+        output, hidden = self.gru(output, hidden)
 
         output = F.log_softmax(self.out(output[0]), dim=1)
         return output, hidden, attn_weights
