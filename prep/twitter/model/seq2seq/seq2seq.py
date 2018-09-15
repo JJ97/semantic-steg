@@ -124,12 +124,12 @@ class Seq2Seq:
         with torch.no_grad():
             for sample in data.validation_set:
                 input_tensor = self.embedder.embed(sample)
-                print('>', input_tensor)
+                print('>', ' '.join(sample))
                 decoder_outputs, loss = self.validation_iteration(input_tensor, criterion)
                 total_validation_loss += loss
                 output_sentence = decoder_outputs
                 print('<', output_sentence)
-                print('loss', loss)
+                print('loss ', loss)
                 print(' ', flush=True)
 
         print("AVERAGE VALIDATION LOSS: {}".format(total_validation_loss / data.validation_set.size()))
@@ -164,7 +164,7 @@ class Seq2Seq:
                         criterion, teacher_forcing_ratio)
                 print_loss_total += loss
 
-                if i % print_every == 0:
+                if i > 0 and i % print_every == 0:
                     print_loss_avg = print_loss_total / print_every
                     print_loss_total = 0
                     print('{0:d} {1:d} {2:.10f}'.format(iteration, i, print_loss_avg))
@@ -174,7 +174,7 @@ class Seq2Seq:
                     print(' ', flush=True)
                     gc.collect()
 
-                if i % validate_every == 0:
+                if i > 0 and i % validate_every == 0:
                     self.validate(data, criterion)
                     gc.collect()
 

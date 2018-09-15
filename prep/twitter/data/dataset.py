@@ -82,6 +82,8 @@ class DataSet(ABC):
         self.generate_wordlist(samples)
         print("...replacing uncommon words")
         samples = samples.swifter.apply(partial(self.replace_uncommon_words))
+        print("...filtering out particularly long tweets")
+        samples = samples[samples.apply(lambda x : 1 <= len(x) and len(x) <= MAX_LENGTH - 2)]
         return samples
 
 
