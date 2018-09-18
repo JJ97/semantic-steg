@@ -12,7 +12,7 @@ from functools import partial
 class DataSet(ABC):
 
     def __init__(self, from_cache, keep_threshold, name,
-                 train_test_split=0.8, validation_test_split=0.8):
+                 train_test_split=0.975, validation_test_split=0.8):
         print("LOADING")
         self.wordlist = set()
         self.keep_threshold = keep_threshold
