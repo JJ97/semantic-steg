@@ -12,8 +12,8 @@ class Seq2Seq:
 
     def __init__(self, embedder, device):
         self.embedder = embedder
-        self.encoder = Encoder(embedder.input_size, hidden_size=512, device=device).to(device)
-        self.decoder = Decoder(embedder.input_size, hidden_size=512, device=device,
+        self.encoder = Encoder(embedder.input_size, hidden_size=256, device=device).to(device)
+        self.decoder = Decoder(embedder.input_size, hidden_size=256, device=device,
                                dropout_p=0.1).to(device)
         self.device = device
 
@@ -95,14 +95,14 @@ class Seq2Seq:
                                                         criterion, use_teacher_forcing=False)
         
         out = self.output2tweet(decoder_outputs)
-        l = float(loss.item())
+        avg_loss = float(loss.item()) / input_tensor.size(0)
 
         del input_tensor
         del loss
         del decoder_outputs
         del encoder_outputs
 
-        return out, l
+        return out, avg_loss
         
     def output2tweet(self, decoder_outputs):
         decoded_words = []
@@ -116,33 +116,33 @@ class Seq2Seq:
         return ' '.join(decoded_words)
 
 
-    def validate(self, data, criterion):
+    def validate(self, data, criterion, print_every):
         print("VALIDATING")
 
         total_validation_loss = 0
 
         with torch.no_grad():
-            for sample in data.validation_set:
+            for (i, sample) in enumerate(data.validation_set):
                 input_tensor = self.embedder.embed(sample)
-                print('>', ' '.join(sample))
-                decoder_outputs, loss = self.validation_iteration(input_tensor, criterion)
+                output_sentence, loss = self.validation_iteration(input_tensor, criterion)
                 total_validation_loss += loss
-                output_sentence = decoder_outputs
-                print('<', output_sentence)
-                print('loss ', loss)
-                print(' ', flush=True)
 
-        print("AVERAGE VALIDATION LOSS: {}".format(total_validation_loss / data.validation_set.size()))
+                if i > 0 and i % print_every == 0:
+                    print('>', ' '.join(sample))
+                    print('<', output_sentence)
+                    print('loss ', loss)
+                    print(' ', flush=True)
+
+        print("AVERAGE VALIDATION LOSS: {}".format(total_validation_loss / data.validation_set.size))
 
 
 
-
-    def train(self, data, iterations, print_every=500, validate_every=25000,
-              learning_rate=0.0025, teacher_forcing_ratio=0.5):
+    def train(self, data, iterations, print_every=500, validate_every=50000,
+              learning_rate=0.0001, teacher_forcing_ratio=0.5):
         criterion = nn.NLLLoss()
 
-        encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=learning_rate)
-        decoder_optimizer = optim.SGD(self.decoder.parameters(), lr=learning_rate)
+        encoder_optimizer = optim.Adam(self.encoder.parameters(), lr=learning_rate)
+        decoder_optimizer = optim.Adam(self.decoder.parameters(), lr=learning_rate)
 
         print_loss_total = 0  # Reset every print_every
         for iteration in range(iterations):
@@ -152,13 +152,6 @@ class Seq2Seq:
 
             for (i, sample) in enumerate(data.train_set):
                 input_tensor = self.embedder.embed(sample)
-
-                if i == 100000:
-                    teacher_forcing_ratio = 0.25
-                    encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=0.0015)
-
-                if i == 200000:
-                    encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=0.0005)
 
                 loss, decoder_output = self.train_iteration(input_tensor, encoder_optimizer, decoder_optimizer,
                         criterion, teacher_forcing_ratio)
@@ -173,9 +166,12 @@ class Seq2Seq:
                     print(decoder_output)
                     print(' ', flush=True)
                     gc.collect()
+                    
+                   # lr = max(0.0015 - i * 7**-9, 0.0001)
+                    #encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=lr)
 
                 if i > 0 and i % validate_every == 0:
-                    self.validate(data, criterion)
+                    self.validate(data, criterion, print_every)
                     gc.collect()
 
                 del input_tensor

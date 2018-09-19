@@ -16,7 +16,7 @@ class OneHot(Embedder):
 
     def embed(self, tweet):
         tweet = ' '.join([START] + tweet + [END])
-        indices = [self.word2index[word] for word in tweet.split(' ')]
+        indices = [self.word2index[word] if word in self.word2index else self.word2index[UNK] for word in tweet.split(' ')]
         tensor = torch.tensor(indices, dtype=torch.long, device=self.device).view(-1, 1)
         return tensor
 
