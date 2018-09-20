@@ -2,8 +2,11 @@ import pandas as pd
 import torch
 
 from data.thinknook import ThinkNook
+from data.thinknook_char import ThinkNookChar
 from embedding.onehot import OneHot
+from embedding.onehot_char import OneHotChar
 from model.seq2seq.seq2seq import Seq2Seq
+from constants import *
 
 def main():
     pd.options.display.max_colwidth = 150
@@ -12,11 +15,11 @@ def main():
     if (torch.cuda.is_available()):
         print('USING: {}'.format(torch.cuda.get_device_name(0)))
 
-    dataset = ThinkNook(from_cache=True)
-    embedder = OneHot(dataset.wordlist, device)
+    dataset = ThinkNookChar(from_cache=True)
+    embedder = OneHotChar(dataset.chars, device)
     model = Seq2Seq(embedder, device)
 
-    model.train(dataset, iterations=5)
+    model.train(dataset, iterations=5, print_every=1)
 
 
 if __name__ == '__main__':

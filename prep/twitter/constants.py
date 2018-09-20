@@ -1,4 +1,4 @@
-UNK = 'UNK'
-START = 'START'
-END = "END"
-MAX_LENGTH = 70
+UNK = u"\uFFFD"
+START = u"\u2402"
+END = u"\u2403"
+MAX_LENGTH = 150

@@ -108,12 +108,10 @@ class Seq2Seq:
         decoded_words = []
         for decoder_output in decoder_outputs:
             topv, topi = decoder_output.data.topk(1)
+            decoded_words.append(topi.item())
             if topi.item() == self.embedder.end_tensor:
-                decoded_words.append(END)
                 break
-            else:
-                decoded_words.append(self.embedder.unembed(topi.item()))
-        return ' '.join(decoded_words)
+        return self.embedder.unembed(decoded_words)
 
 
     def validate(self, data, criterion, print_every):
@@ -128,7 +126,7 @@ class Seq2Seq:
                 total_validation_loss += loss
 
                 if i > 0 and i % print_every == 0:
-                    print('>', ' '.join(sample))
+                    print('>', data.get_printable_sample(sample))
                     print('<', output_sentence)
                     print('loss ', loss)
                     print(' ', flush=True)
@@ -162,7 +160,7 @@ class Seq2Seq:
                     print_loss_total = 0
                     print('{0:d} {1:d} {2:.10f}'.format(iteration, i, print_loss_avg))
 
-                    print(' '.join(sample))
+                    print(data.get_printable_sample(sample))
                     print(decoder_output)
                     print(' ', flush=True)
                     gc.collect()

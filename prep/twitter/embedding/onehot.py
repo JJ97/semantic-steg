@@ -20,6 +20,6 @@ class OneHot(Embedder):
         tensor = torch.tensor(indices, dtype=torch.long, device=self.device).view(-1, 1)
         return tensor
 
-    def unembed(self, index):
-        return self.wordlist[index]
+    def unembed(self, decoder_outputs):
+        return ' '.join(self.wordlist[index] for index in decoder_outputs)
 
