@@ -50,7 +50,7 @@
   year={2015}
 }
 
-@Comment Yelp corpus. Really interesting idea but not sure why they give the discriminator the hidden state instead of the output, english is quite poor and only discussion of accuracy instead of f1
+@Comment Yelp corpus. Potential solution to our encoder-decoder gap -> just use the encoder's last hidden state. Their attempt at adding an adversarial component didn't seem to really work though...
 @article{advseq2seq,
   title={Sentiment Transfer using Seq2Seq Adversarial Autoencoders},
   author={Singh, Ayush and Palod, Ritu},
@@ -174,4 +174,36 @@
   pages={153},
   year={2013},
   publisher={IACSIT Press}
+}
+
+
+@inproceedings{autoencimagecomp,
+  title={Full Resolution Image Compression with Recurrent Neural Networks.},
+  author={Toderici, George and Vincent, Damien and Johnston, Nick and Hwang, Sung Jin and Minnen, David and Shor, Joel and Covell, Michele},
+  booktitle={CVPR},
+  pages={5435--5443},
+  year={2017}
+}
+
+@inproceedings{autoencstacking,
+  title={Efficient learning of sparse representations with an energy-based model},
+  author={Poultney, Christopher and Chopra, Sumit and Cun, Yann L and others},
+  booktitle={Advances in neural information processing systems},
+  pages={1137--1144},
+  year={2007}
+}
+
+@book{goodfellow,
+  title={Deep learning},
+  author={Goodfellow, Ian and Bengio, Yoshua and Courville, Aaron and Bengio, Yoshua},
+  volume={1},
+  year={2016},
+  publisher={MIT press Cambridge}
+}
+
+@article{seq2seqvae,
+  title={Recurrent Neural Network-Based Semantic Variational Autoencoder for Sequence-to-Sequence Learning},
+  author={Jang, Myeongjun and Seo, Seungwan and Kang, Pilsung},
+  journal={arXiv preprint arXiv:1802.03238},
+  year={2018}
 }
