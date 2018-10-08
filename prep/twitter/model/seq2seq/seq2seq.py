@@ -48,12 +48,10 @@ class Seq2Seq:
         return  decoder_outputs, loss
 
 
-    def train_iteration(self, input_tensor, encoder_optimizer, decoder_optimizer,
-                        criterion, teacher_forcing_ratio):
+    def train_iteration(self, input_tensor, optimizer, criterion, teacher_forcing_ratio):
         encoder_hidden = self.encoder.init_hidden()
 
-        encoder_optimizer.zero_grad()
-        decoder_optimizer.zero_grad()
+        optimizer.zero_grad()
 
         encoder_outputs = torch.zeros(MAX_LENGTH, self.encoder.hidden_size, device=self.device)
 
@@ -68,17 +66,10 @@ class Seq2Seq:
 
         loss.backward()
 
-        encoder_optimizer.step()
-        decoder_optimizer.step()
+        optimizer.step()
 
         avg_loss = float(loss.item()) / input_tensor.size(0)
         out = self.output2tweet(decoder_outputs)
-
-        del input_tensor
-        del loss
-        del decoder_outputs
-        del encoder_outputs
-
 
         return avg_loss, out
 
@@ -139,8 +130,8 @@ class Seq2Seq:
               learning_rate=0.0001, teacher_forcing_ratio=0.5):
         criterion = nn.NLLLoss()
 
-        encoder_optimizer = optim.Adam(self.encoder.parameters(), lr=learning_rate)
-        decoder_optimizer = optim.Adam(self.decoder.parameters(), lr=learning_rate)
+        optimizer = optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()),
+                                       lr=learning_rate)
 
         print_loss_total = 0  # Reset every print_every
         for iteration in range(iterations):
@@ -151,8 +142,7 @@ class Seq2Seq:
             for (i, sample) in enumerate(data.train_set):
                 input_tensor = self.embedder.embed(sample)
 
-                loss, decoder_output = self.train_iteration(input_tensor, encoder_optimizer, decoder_optimizer,
-                        criterion, teacher_forcing_ratio)
+                loss, decoder_output = self.train_iteration(input_tensor, optimizer, criterion, teacher_forcing_ratio)
                 print_loss_total += loss
 
                 if i > 0 and i % print_every == 0:
@@ -163,16 +153,10 @@ class Seq2Seq:
                     print(data.get_printable_sample(sample))
                     print(decoder_output)
                     print(' ', flush=True)
-                    gc.collect()
-                    
-                   # lr = max(0.0015 - i * 7**-9, 0.0001)
-                    #encoder_optimizer = optim.SGD(self.encoder.parameters(), lr=lr)
 
                 if i > 0 and i % validate_every == 0:
                     self.validate(data, criterion, print_every)
-                    gc.collect()
 
-                del input_tensor
 
 
             self.validate(data, criterion)

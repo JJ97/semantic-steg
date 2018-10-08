@@ -6,6 +6,7 @@ cache/
 */libs/*
 code/server/static/libs/*
 mil.csv
+code/word2vec_twitter_model.bin
 *MSD.p
 __pycache__/
 .idea/
