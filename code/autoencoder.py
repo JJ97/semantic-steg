@@ -183,10 +183,12 @@ def get_dataloaders(dataset):
 train_loader, validation_loader, test_loader = get_dataloaders(dataset)
 
 class Encoder(nn.Module):
-    def __init__(self, embedder, hidden_size, device):
+    def __init__(self, embedder, hidden_size, device, bidirectional=False):
         super(Encoder, self).__init__()
         self.hidden_size = hidden_size
-        self.gru = nn.GRU(input_size=400, hidden_size=hidden_size)
+        self.bidirectional = bidirectional
+        self.gru = nn.GRU(input_size=400, hidden_size=hidden_size, bidirectional=bidirectional)
+        self.dropout = nn.Dropout(p=0.2)
 
         self.device = device
 
@@ -196,30 +198,34 @@ class Encoder(nn.Module):
         dprint('hidden {} = {}'.format(hidden.size(), hidden))
         # takes input of shape (seq_len, batch, input_size)
         output, hidden = self.gru(input, hidden)
+        output = self.dropout(output)
         # output shape of seq_len, batch, num_directions * hidden_size
         dprint('hidden {} = {}'.format(hidden.size(), hidden))
         dprint('output {} = {}'.format(output.size(), output))
         return output, hidden
 
     def init_hidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device=self.device)
+        s = 2 if self.bidirectional else 1
+        return torch.zeros(s, 1, self.hidden_size, device=self.device)
 
 
 class Decoder(nn.Module):
-    def __init__(self, embedder, hidden_size, device, dropout_p=0.1):
+    def __init__(self, embedder, hidden_size, device, bidirectional=False, dropout_p=0.1):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
         self.embedder = embedder
-        self.dropout_p = dropout_p
+        self.bidirectional = bidirectional
 
-        self.gru = nn.GRU(input_size=400, hidden_size=hidden_size)
-        self.out = nn.Linear(hidden_size, 401)
+        self.gru = nn.GRU(input_size=400, hidden_size=hidden_size, bidirectional=bidirectional)
+        s = 2 if bidirectional else 1
+        self.dropout = nn.Dropout(p=0.2)
+        self.out = nn.Linear(hidden_size * s, 401)
         self.activation = nn.Tanh()
         self.stop_activation = nn.Sigmoid()
 
         self.device = device
 
-    def forward(self, encoder_outputs, encoder_hidden):
+    def forward(self, encoder_outputs, encoder_hidden, p_teacher_forcing, original_input):
         hidden = encoder_hidden
         input = self.embedder.start_tensor.view(1, 1, -1)
 
@@ -231,6 +237,12 @@ class Decoder(nn.Module):
             dprint('hidden {} = {}'.format(hidden.size(), hidden))
             output, hidden, stop = self.step(input, hidden)
             dprint('output {} = {}'.format(output.size(), output))
+
+            use_teacher_forcing = random.random() < p_teacher_forcing
+            input = original_input[0][i] if use_teacher_forcing else output
+            input = input.view(1, 1, -1)
+
+            dprint('input {} = {}'.format(input.size(), input))
             outputs.append(output)
             stops.append(stop)
             if (stop > 0.5):
@@ -240,6 +252,7 @@ class Decoder(nn.Module):
     def step(self, input, hidden):
         output = F.relu(input)
         output, hidden = self.gru(output, hidden)
+        output = self.dropout(output)
         output = self.out(output)
 
         stop = self.stop_activation(output[0][0][400:])
@@ -247,7 +260,8 @@ class Decoder(nn.Module):
         return output, hidden, stop
 
     def init_hidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device=self.device)
+        s = 2 if self.bidirectional else 1
+        return torch.zeros(s, 1, self.hidden_size, device=self.device)
 
 
 class Seq2Seq:
@@ -256,23 +270,27 @@ class Seq2Seq:
         self.train_loader = train_loader
         self.validation_loader = validation_loader
         self.test_loader = test_loader
-        self.encoder = Encoder(dataset, hidden_size=256, device=device).to(device)
-        self.decoder = Decoder(dataset, hidden_size=256, device=device, dropout_p=0.1).to(device)
+
+        self.bidirectional=False
+
+        self.encoder = Encoder(dataset, hidden_size=256, device=device, bidirectional=self.bidirectional).to(device)
+        self.decoder = Decoder(dataset, hidden_size=256, device=device, bidirectional=self.bidirectional).to(device)
         self.criterion = nn.MSELoss()
-        self.stop_criterion = nn.NLLLoss()
+        self.stop_criterion = nn.MSELoss()
         self.device = device
 
         print(self.encoder)
         print(self.decoder)
 
 
-    def train_step(self, input_tensor, optimizer, teacher_forcing_ratio):
+    def train_step(self, input_tensor, optimizer, p_teacher_forcing):
         encoder_hidden = self.encoder.init_hidden()
 
         optimizer.zero_grad()
 
         encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
-        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
+
+        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden, p_teacher_forcing, input_tensor)
 
         loss = sum(self.criterion(output, input) for output, input in zip(decoder_outputs, input_tensor[0]))
 
@@ -287,18 +305,21 @@ class Seq2Seq:
         return avg_loss, decoder_outputs
 
 
-    def train(self, iterations, print_every=500, validate_every=50000,
-              learning_rate=0.0001, teacher_forcing_ratio=0.5):
+    def train(self, iterations, print_every=500, validate_every=50000, learning_rate=0.0001,
+              initial_teacher_forcing_p=0.8, final_teacher_forcing_p=0.1, teacher_force_decay=0.0000003):
 
         optimizer = optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()),
                                lr=learning_rate)
+
+        print('USING: {}'.format(self.device))
 
         print_loss_total = 0  # Reset every print_every
         for iteration in range(iterations):
 
             for (i, input_tensor) in enumerate(train_loader):
 
-                loss, decoder_output = self.train_step(input_tensor, optimizer, teacher_forcing_ratio)
+                teacher_forcing_p = max(final_teacher_forcing_p, initial_teacher_forcing_p - teacher_force_decay * i)
+                loss, decoder_output = self.train_step(input_tensor, optimizer, teacher_forcing_p)
                 print_loss_total += loss
 
                 if i > 0 and i % print_every == 0:
@@ -323,11 +344,11 @@ class Seq2Seq:
 
             self.validate(dataset, validation_loader)
 
-    def validation_step(self, input_tensor, criterion):
+    def validation_step(self, input_tensor):
         encoder_hidden = self.encoder.init_hidden()
 
         encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
-        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
+        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden, False, None)
 
         loss = sum(self.criterion(output, input) for output, input in zip(decoder_outputs, input_tensor[0]))
 
@@ -340,14 +361,14 @@ class Seq2Seq:
         return decoder_outputs, avg_loss
 
 
-    def validate(self, data, criterion, print_every):
+    def validate(self, data, print_every):
         print("VALIDATING")
 
         total_validation_loss = 0
 
         with torch.no_grad():
             for (i, input_tensor) in enumerate(validation_loader):
-                decoder_output, loss = self.validation_step(input_tensor, criterion)
+                decoder_output, loss = self.validation_step(input_tensor)
                 total_validation_loss += loss
 
                 if i > 0 and i % print_every == 0:
