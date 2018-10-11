@@ -182,7 +182,6 @@ class Encoder(nn.Module):
         dprint('hidden {} = {}'.format(hidden.size(), hidden))
         # takes input of shape (seq_len, batch, input_size)
         output, hidden = self.gru(input, hidden)
-        output = self.dropout(output)
         # output shape of seq_len, batch, num_directions * hidden_size
         dprint('hidden {} = {}'.format(hidden.size(), hidden))
         # dprint('output {} = {}'.format(output.size(), output))
