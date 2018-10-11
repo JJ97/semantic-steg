@@ -169,10 +169,11 @@ class ThinkNook(Dataset):
 dataset = ThinkNook(from_cache=True, word2vec=w2v_model, name='ThinkNook')
 
 class Encoder(nn.Module):
-    def __init__(self, embedder, device):
+    def __init__(self, embedder, device, bidirectional=False):
         super(Encoder, self).__init__()
         self.hidden_size = 256
-        self.gru = nn.GRU(input_size=400, hidden_size=self.hidden_size)
+        self.bidirectional = bidirectional
+        self.gru = nn.GRU(input_size=400, hidden_size=self.hidden_size, bidirectional=bidirectional)
 
         self.device = device
 
@@ -186,29 +187,36 @@ class Encoder(nn.Module):
         return output, hidden
 
     def init_hidden(self):
-        return torch.zeros(1, BATCH_SIZE, self.hidden_size, device=self.device)
+        s = 2 if self.bidirectional else 1
+        # num_layers * num_directions, batch, hidden_size
+        return torch.zeros(s, BATCH_SIZE, self.hidden_size, device=self.device)
 
 class Decoder(nn.Module):
-    def __init__(self, embedder, device, dropout_p=0.1):
+    def __init__(self, embedder, device, bidirectional=False):
         super(Decoder, self).__init__()
         self.hidden_size = 256
+        self.bidirectional = bidirectional
         self.embedder = embedder
-        self.dropout_p = dropout_p
 
-        self.gru = nn.GRU(input_size=400, hidden_size=self.hidden_size)
-        self.out = nn.Linear(self.hidden_size, 401)
+        s = 2 if bidirectional else 1
+
+        self.gru = nn.GRU(input_size=400, hidden_size=self.hidden_size, bidirectional=bidirectional)
+        self.dropout = nn.Dropout(p=0.2)
+        self.out = nn.Linear(self.hidden_size * s, 401)
         self.activation = nn.Tanh()
         self.stop_activation = nn.Sigmoid()
 
         self.device = device
 
-    def forward(self, encoder_outputs, encoder_hidden):
+    def forward(self, encoder_outputs, encoder_hidden, teacher_forcing_p, original_input):
         hidden = encoder_hidden
         input = self.embedder.start_tensor.repeat(1, BATCH_SIZE, 1)
 
         outputs = []
         stops = []
         encoder_outputs, _ = pad_packed_sequence(encoder_outputs)
+        padded_input, _ = pad_packed_sequence(original_input)
+        dprint('padded_input {} = {}'.format(padded_input.size(), padded_input))
         max_length = len(encoder_outputs)
         for i in range(max_length):
             dprint('input {} = {}'.format(input.size(), input))
@@ -216,6 +224,12 @@ class Decoder(nn.Module):
             output, hidden, stop = self.step(input, hidden)
             dprint('output {} = {}'.format(output.size(), output))
             dprint('stop {} = {}'.format(stop.size(), stop))
+
+            use_teacher_forcing = random.random() < teacher_forcing_p
+            dprint('forced' if use_teacher_forcing else 'unforced')
+            input = padded_input[i,:,:] if use_teacher_forcing else output
+            input = input.view(1,-1,400)
+
             outputs.append(output)
             stops.append(stop)
 
@@ -238,7 +252,9 @@ class Decoder(nn.Module):
         return output, hidden, stop
 
     def init_hidden(self):
-        return torch.zeros(1, BATCH_SIZE, self.hidden_size, device=self.device)
+        s = 2 if self.bidirectional else 1
+        # num_layers * num_directions, batch, hidden_size
+        return torch.zeros(s, BATCH_SIZE, self.hidden_size, device=self.device)
 
 class Seq2Seq:
     def __init__(self, dataset, train_loader, validation_loader, test_loader, device):
@@ -246,8 +262,11 @@ class Seq2Seq:
         self.train_loader = train_loader
         self.validation_loader = validation_loader
         self.test_loader = test_loader
-        self.encoder = Encoder(dataset, device=device).to(device)
-        self.decoder = Decoder(dataset, device=device, dropout_p=0.1).to(device)
+
+        self.bidirectional = False
+
+        self.encoder = Encoder(dataset, device=device,  bidirectional=self.bidirectional).to(device)
+        self.decoder = Decoder(dataset, device=device,  bidirectional=self.bidirectional).to(device)
         self.criterion =  nn.MSELoss()
         self.stop_criterion = nn.MSELoss()
         self.device = device
@@ -322,13 +341,13 @@ class Seq2Seq:
         return loss
 
 
-    def train_step(self, input_tensor, lengths, optimizer, teacher_forcing_ratio):
+    def train_step(self, input_tensor, lengths, optimizer, teacher_forcing_p):
         encoder_hidden = self.encoder.init_hidden()
 
         optimizer.zero_grad()
 
         encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
-        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
+        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden, teacher_forcing_p, input_tensor)
 
         loss = self.get_loss(input_tensor, lengths, decoder_outputs, stops)
 
@@ -338,8 +357,8 @@ class Seq2Seq:
         return loss.item(), decoder_outputs
 
 
-    def train(self, epochs=1, print_every=500, validate_every=50000,
-              learning_rate=0.0001, teacher_forcing_ratio=0.5):
+    def train(self, epochs=1, print_every=500, validate_every=50000, learning_rate=0.0001,
+              initial_teacher_forcing_p=0.8, final_teacher_forcing_p=0.1, teacher_force_decay=0.0000003):
 
         optimizer = optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()), lr=learning_rate)
 
@@ -347,7 +366,9 @@ class Seq2Seq:
         for epoch in range(epochs):
             for (i, (packed_input, lengths)) in enumerate(train_loader):
 
-                loss, decoder_outputs = self.train_step(packed_input, lengths, optimizer, teacher_forcing_ratio)
+                teacher_forcing_p = max(final_teacher_forcing_p, initial_teacher_forcing_p - teacher_force_decay * i)
+
+                loss, decoder_outputs = self.train_step(packed_input, lengths, optimizer, teacher_forcing_p)
                 print_loss_total += loss
 
                 dprint((i + 1) * BATCH_SIZE)
@@ -431,7 +452,7 @@ train_loader, validation_loader, test_loader = get_dataloaders(dataset)
 
 model = Seq2Seq(dataset, train_loader, validation_loader, test_loader, device)
 
-model.train(epochs=5, print_every=500)
+model.train(epochs=5, print_every=int(500/BATCH_SIZE))
 
 
 
