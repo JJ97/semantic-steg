@@ -169,6 +169,7 @@ class ThinkNook(Dataset):
 dataset = ThinkNook(from_cache=True, word2vec=w2v_model, name='ThinkNook')
 
 class Encoder(nn.Module):
+  
     def __init__(self, embedder, device, bidirectional=False):
         super(Encoder, self).__init__()
         self.hidden_size = 256
@@ -181,6 +182,7 @@ class Encoder(nn.Module):
         dprint('hidden {} = {}'.format(hidden.size(), hidden))
         # takes input of shape (seq_len, batch, input_size)
         output, hidden = self.gru(input, hidden)
+        output = self.dropout(output)
         # output shape of seq_len, batch, num_directions * hidden_size
         dprint('hidden {} = {}'.format(hidden.size(), hidden))
         # dprint('output {} = {}'.format(output.size(), output))
@@ -203,6 +205,7 @@ class Decoder(nn.Module):
         self.gru = nn.GRU(input_size=400, hidden_size=self.hidden_size, bidirectional=bidirectional)
         self.dropout = nn.Dropout(p=0.2)
         self.out = nn.Linear(self.hidden_size * s, 401)
+
         self.activation = nn.Tanh()
         self.stop_activation = nn.Sigmoid()
 
@@ -244,6 +247,7 @@ class Decoder(nn.Module):
     def step(self, input, hidden):
         output = F.relu(input)
         output, hidden = self.gru(output, hidden)
+        output = self.dropout(output)
         output = self.out(output)
 
         # Separate stop neuron from rest of the output
@@ -362,12 +366,14 @@ class Seq2Seq:
 
         optimizer = optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()), lr=learning_rate)
 
+        print('USING: {}'.format(self.device))
+
         print_loss_total = 0  # Reset every print_every
         for epoch in range(epochs):
             for (i, (packed_input, lengths)) in enumerate(train_loader):
 
                 teacher_forcing_p = max(final_teacher_forcing_p, initial_teacher_forcing_p - teacher_force_decay * i)
-
+                
                 loss, decoder_outputs = self.train_step(packed_input, lengths, optimizer, teacher_forcing_p)
                 print_loss_total += loss
 
@@ -387,20 +393,19 @@ class Seq2Seq:
         encoder_hidden = self.encoder.init_hidden()
 
         encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
-        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
+        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden, False, None)
 
         loss = self.get_loss(input_tensor, decoder_outputs, stops)
 
         return loss.item(), decoder_outputs
 
 
-    def validate(self, data, criterion, print_every):
+    def validate(self, data, print_every):
         print("VALIDATING")
 
         total_validation_loss = 0
 
         with torch.no_grad():
-
             for (i, [input_tensor, lengths]) in enumerate(validation_loader):
                 loss, decoder_outputs = self.validation_step(input_tensor, lengths, criterion)
                 total_validation_loss += loss
