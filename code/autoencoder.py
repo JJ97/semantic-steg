@@ -17,6 +17,7 @@ from torch import optim, nn
 from word2vecReader import Word2Vec
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 package_directory = os.path.dirname(os.path.abspath("__file__"))
 
@@ -26,8 +27,9 @@ UNK = u"<?>"
 START = u"</s>"
 END = u"</>"
 MAX_LENGTH = 70
-TRAIN_TEST_SPLIT = 0.8
-VALIDATION_TEST_SPLIT = 0.8
+TRAIN_TEST_SPLIT = 0.9
+VALIDATION_TEST_SPLIT = 0.9
+BATCH_SIZE = 32
 
 DEBUG = False
 VISDOM = False
@@ -63,6 +65,7 @@ class ThinkNook(Dataset):
         self.samples.sample(self.size)
         self.start_tensor = torch.tensor(self.word2vec[START], dtype=torch.float, device=device)
         self.end_tensor = torch.tensor(self.word2vec[END], dtype=torch.float, device=device)
+        self.padding_tensor = torch.zeros_like(self.start_tensor)
         print("LOADED {} SAMPLES".format(self.size))
 
     def __len__(self):
@@ -76,7 +79,11 @@ class ThinkNook(Dataset):
             tweet = []
 
         tweet = [START] + tweet + [END]
-        return torch.tensor([self.word2vec[word] for word in tweet], dtype=torch.float, device=device)
+        dprint(tweet)
+        seq_length = len(tweet)
+        # pad to max length
+        vectors  = [self.word2vec[word] for word in tweet] + [np.zeros(400)] * (MAX_LENGTH - seq_length)
+        return torch.tensor(vectors, dtype=torch.float, device=device), seq_length
 
 
     def load(self):
@@ -154,14 +161,255 @@ class ThinkNook(Dataset):
     def get_printable_sample(self, sample):
        return ' '.join(sample)
 
-    def unembed(self, decoder_outputs):
-        decoder_outputs = [[v.numpy()] for v in decoder_outputs.detach().cpu().view(-1, 400)]
+    def unembed(self, decoder_outputs, length=MAX_LENGTH):
+        # print('decoder_outputs {} = {}'.format(decoder_outputs.size(), decoder_outputs))
+        decoder_outputs = [[v.numpy()] for v in decoder_outputs.detach().cpu().view(-1, 400)[:length,:]]
         return ' '.join(self.word2vec.most_similar(v, topn=1)[0][0] for v in decoder_outputs)
-
 
 dataset = ThinkNook(from_cache=True, word2vec=w2v_model, name='ThinkNook')
 
+class Encoder(nn.Module):
+    def __init__(self, embedder, device):
+        super(Encoder, self).__init__()
+        self.hidden_size = 256
+        self.gru = nn.GRU(input_size=400, hidden_size=self.hidden_size)
+
+        self.device = device
+
+    def forward(self, input, hidden):
+        dprint('hidden {} = {}'.format(hidden.size(), hidden))
+        # takes input of shape (seq_len, batch, input_size)
+        output, hidden = self.gru(input, hidden)
+        # output shape of seq_len, batch, num_directions * hidden_size
+        dprint('hidden {} = {}'.format(hidden.size(), hidden))
+        # dprint('output {} = {}'.format(output.size(), output))
+        return output, hidden
+
+    def init_hidden(self):
+        return torch.zeros(1, BATCH_SIZE, self.hidden_size, device=self.device)
+
+class Decoder(nn.Module):
+    def __init__(self, embedder, device, dropout_p=0.1):
+        super(Decoder, self).__init__()
+        self.hidden_size = 256
+        self.embedder = embedder
+        self.dropout_p = dropout_p
+
+        self.gru = nn.GRU(input_size=400, hidden_size=self.hidden_size)
+        self.out = nn.Linear(self.hidden_size, 401)
+        self.activation = nn.Tanh()
+        self.stop_activation = nn.Sigmoid()
+
+        self.device = device
+
+    def forward(self, encoder_outputs, encoder_hidden):
+        hidden = encoder_hidden
+        input = self.embedder.start_tensor.repeat(1, BATCH_SIZE, 1)
+
+        outputs = []
+        stops = []
+        encoder_outputs, _ = pad_packed_sequence(encoder_outputs)
+        max_length = len(encoder_outputs)
+        for i in range(max_length):
+            dprint('input {} = {}'.format(input.size(), input))
+            dprint('hidden {} = {}'.format(hidden.size(), hidden))
+            output, hidden, stop = self.step(input, hidden)
+            dprint('output {} = {}'.format(output.size(), output))
+            dprint('stop {} = {}'.format(stop.size(), stop))
+            outputs.append(output)
+            stops.append(stop)
+
+            # Pre-empt only when ALL stop neurons are high
+            if (stop > 0.5).all():
+                break
+
+        outputs = torch.stack(outputs)
+        stops = torch.stack(stops)
+        return outputs, stops
+
+    def step(self, input, hidden):
+        output = F.relu(input)
+        output, hidden = self.gru(output, hidden)
+        output = self.out(output)
+
+        # Separate stop neuron from rest of the output
+        stop = self.stop_activation(output[0,:,400])
+        output = self.activation(output[0,:,:400])
+        return output, hidden, stop
+
+    def init_hidden(self):
+        return torch.zeros(1, BATCH_SIZE, self.hidden_size, device=self.device)
+
+class Seq2Seq:
+    def __init__(self, dataset, train_loader, validation_loader, test_loader, device):
+        self.dataset = dataset
+        self.train_loader = train_loader
+        self.validation_loader = validation_loader
+        self.test_loader = test_loader
+        self.encoder = Encoder(dataset, device=device).to(device)
+        self.decoder = Decoder(dataset, device=device, dropout_p=0.1).to(device)
+        self.criterion =  nn.MSELoss()
+        self.stop_criterion = nn.MSELoss()
+        self.device = device
+
+        print(self.encoder)
+        print(self.decoder)
+
+    def print_step(self, packed_input, lengths, decoder_outputs, avg_loss, epoch, i):
+        # unpack for decoding
+        input_tensor, _ = pad_packed_sequence(packed_input)
+
+        dprint('input_tensor {} = {}'.format(input_tensor.size(), input_tensor))
+        dprint('lengths {} = {}'.format(lengths.size(), lengths))
+
+        # print out a medium sized tweet
+        mid = int(BATCH_SIZE / 2)
+        input_to_print =  input_tensor[:lengths[mid], mid, :]
+        output_to_print = decoder_outputs[:lengths[mid], mid, :]
+
+        dprint('input_to_print {} = {}'.format(input_to_print.size(), input_to_print))
+        dprint('input_to_print {} = {}'.format(output_to_print.size(), output_to_print))
+
+        input_text = self.dataset.unembed(input_to_print)
+        output_text = self.dataset.unembed(output_to_print)
+
+        print('{0:d} {1:d} {2:.10f}'.format(epoch, i * BATCH_SIZE, avg_loss))
+
+        print(input_text)
+        print(output_text)
+        print(' ', flush=True)
+
+        if VISDOM:
+            vis.text('{} => {}'.format(input_text, output_text))
+
+    def get_loss(self, input_tensor, lengths, decoder_outputs, stops):
+
+        dprint('decoder_outputs {} = {}'.format(decoder_outputs.size(), decoder_outputs))
+
+        # unpack input sequence so it can be easily processed
+        input_tensor, _ = pad_packed_sequence(input_tensor)
+        dprint('input_tensor {} = {}'.format(input_tensor.size(), input_tensor))
+
+        # resize input to match decoder output (due to pre-empting decoder)
+        cropped_input = input_tensor[:decoder_outputs.size(0), :, :]
+        dprint('cropped_input {} = {}'.format(cropped_input.size(), cropped_input))
+
+        # mask out decoder outputs in positions that don't have a corresponding original input
+        # we don't want to define a loss on these outputs
+        mask = torch.tensor([[[1] * 400 if torch.max(j) > 0 else [0] * 400 for j in i] for i in cropped_input],
+                            dtype=torch.float, device=self.device)
+        # mask = (cropped_input > self.dataset.padding_tensor).float()
+        dprint('mask {} = {}'.format(mask.size(), mask))
+        dprint('decoder_outputs {} = {}'.format(decoder_outputs.size(), decoder_outputs))
+        decoder_outputs = decoder_outputs * mask
+        dprint('decoder_outputs {} = {}'.format(decoder_outputs.size(), decoder_outputs))
+
+        loss = self.criterion(decoder_outputs, cropped_input)
+
+        # stop neuron should be zero everywhere other than the final position of each input sequence
+        ideal_stops = torch.zeros_like(stops)
+        stop_size = ideal_stops.size()
+        dprint(stop_size)
+        # need to check bounds in case of pre-empted decoding
+        for (i, j) in enumerate(lengths):
+            if (j - 1 <= stop_size[0] - 1):
+                ideal_stops[j - 1, i] = 1
+
+        dprint('stops {} = {}'.format(stops.size(), stops))
+        dprint('ideal_stops {} = {}'.format(ideal_stops.size(), ideal_stops))
+        loss += self.stop_criterion(stops, ideal_stops)
+
+        return loss
+
+
+    def train_step(self, input_tensor, lengths, optimizer, teacher_forcing_ratio):
+        encoder_hidden = self.encoder.init_hidden()
+
+        optimizer.zero_grad()
+
+        encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
+        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
+
+        loss = self.get_loss(input_tensor, lengths, decoder_outputs, stops)
+
+        loss.backward()
+        optimizer.step()
+
+        return loss.item(), decoder_outputs
+
+
+    def train(self, epochs=1, print_every=500, validate_every=50000,
+              learning_rate=0.0001, teacher_forcing_ratio=0.5):
+
+        optimizer = optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()), lr=learning_rate)
+
+        print_loss_total = 0  # Reset every print_every
+        for epoch in range(epochs):
+            for (i, (packed_input, lengths)) in enumerate(train_loader):
+
+                loss, decoder_outputs = self.train_step(packed_input, lengths, optimizer, teacher_forcing_ratio)
+                print_loss_total += loss
+
+                dprint((i + 1) * BATCH_SIZE)
+                if i > 0 and i % print_every == 0:
+                    print_loss_avg = print_loss_total / print_every
+                    self.print_step(packed_input, lengths, decoder_outputs, print_loss_avg, epoch, i)
+                    print_loss_total = 0
+
+                if i > 0 and i % validate_every == 0:
+                    self.validate(self.dataset, validation_loader, print_every)
+
+
+            self.validate(dataset, validation_loader)
+
+    def validation_step(self, input_tensor, lengths, criterion):
+        encoder_hidden = self.encoder.init_hidden()
+
+        encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
+        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
+
+        loss = self.get_loss(input_tensor, decoder_outputs, stops)
+
+        return loss.item(), decoder_outputs
+
+
+    def validate(self, data, criterion, print_every):
+        print("VALIDATING")
+
+        total_validation_loss = 0
+
+        with torch.no_grad():
+
+            for (i, [input_tensor, lengths]) in enumerate(validation_loader):
+                loss, decoder_outputs = self.validation_step(input_tensor, lengths, criterion)
+                total_validation_loss += loss
+
+                if i > 0 and i % print_every == 0:
+                    print_loss = total_validation_loss / i
+                    self.print_step(input_tensor, lengths, decoder_outputs, print_loss, 0, i)
+                    j = 0
+
+        print("AVERAGE VALIDATION LOSS: {}".format(total_validation_loss / len(validation_loader)))
+
 def get_dataloaders(dataset):
+
+    def collate(samples):
+        # Sort batch by sequence length and pack
+        inputs, lengths = zip(*samples)
+
+        input_tensor = torch.stack(list(inputs))
+        lengths = torch.tensor(lengths, device=device)
+
+        lengths, perm_index = lengths.sort(0, descending=True)
+        input_tensor = input_tensor[perm_index]
+        input_tensor = input_tensor.permute(1, 0, 2).contiguous()
+
+        dprint('input_tensor {} = {}'.format(input_tensor.size(), input_tensor))
+        dprint('lengths {} = {}'.format(lengths.size(), lengths))
+
+        packed_input = pack_padded_sequence(input_tensor, list(lengths.data))
+        return packed_input, lengths
+
     indices = list(range(len(dataset)))
     np.random.shuffle(indices)
 
@@ -174,196 +422,16 @@ def get_dataloaders(dataset):
     validation_sampler = SubsetRandomSampler(validation_indices)
     test_sampler = SubsetRandomSampler(test_indices)
 
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=train_sampler)
-    validation_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=validation_sampler)
-    test_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=test_sampler)
-
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, sampler=train_sampler, collate_fn=collate)
+    validation_loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, sampler=validation_sampler, collate_fn=collate)
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, sampler=test_sampler, collate_fn=collate)
     return train_loader, validation_loader, test_loader
 
 train_loader, validation_loader, test_loader = get_dataloaders(dataset)
 
-class Encoder(nn.Module):
-    def __init__(self, embedder, hidden_size, device):
-        super(Encoder, self).__init__()
-        self.hidden_size = hidden_size
-        self.gru = nn.GRU(input_size=400, hidden_size=hidden_size)
-
-        self.device = device
-
-    def forward(self, input, hidden):
-        input = input.view(-1, 1, 400)
-        dprint('input {} = {}'.format(input.size(), input))
-        dprint('hidden {} = {}'.format(hidden.size(), hidden))
-        # takes input of shape (seq_len, batch, input_size)
-        output, hidden = self.gru(input, hidden)
-        # output shape of seq_len, batch, num_directions * hidden_size
-        dprint('hidden {} = {}'.format(hidden.size(), hidden))
-        dprint('output {} = {}'.format(output.size(), output))
-        return output, hidden
-
-    def init_hidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device=self.device)
-
-
-class Decoder(nn.Module):
-    def __init__(self, embedder, hidden_size, device, dropout_p=0.1):
-        super(Decoder, self).__init__()
-        self.hidden_size = hidden_size
-        self.embedder = embedder
-        self.dropout_p = dropout_p
-
-        self.gru = nn.GRU(input_size=400, hidden_size=hidden_size)
-        self.out = nn.Linear(hidden_size, 401)
-        self.activation = nn.Tanh()
-        self.stop_activation = nn.Sigmoid()
-
-        self.device = device
-
-    def forward(self, encoder_outputs, encoder_hidden):
-        hidden = encoder_hidden
-        input = self.embedder.start_tensor.view(1, 1, -1)
-
-        outputs = []
-        stops = []
-        max_length = len(encoder_outputs)
-        for i in range(max_length):
-            dprint('input {} = {}'.format(input.size(), input))
-            dprint('hidden {} = {}'.format(hidden.size(), hidden))
-            output, hidden, stop = self.step(input, hidden)
-            dprint('output {} = {}'.format(output.size(), output))
-            outputs.append(output)
-            stops.append(stop)
-            if (stop > 0.5):
-                break
-        return outputs, stops
-
-    def step(self, input, hidden):
-        output = F.relu(input)
-        output, hidden = self.gru(output, hidden)
-        output = self.out(output)
-
-        stop = self.stop_activation(output[0][0][400:])
-        output = self.activation(output[0][0][:400])
-        return output, hidden, stop
-
-    def init_hidden(self):
-        return torch.zeros(1, 1, self.hidden_size, device=self.device)
-
-
-class Seq2Seq:
-    def __init__(self, dataset, train_loader, validation_loader, test_loader, device):
-        self.dataset = dataset
-        self.train_loader = train_loader
-        self.validation_loader = validation_loader
-        self.test_loader = test_loader
-        self.encoder = Encoder(dataset, hidden_size=256, device=device).to(device)
-        self.decoder = Decoder(dataset, hidden_size=256, device=device, dropout_p=0.1).to(device)
-        self.criterion = nn.MSELoss()
-        self.stop_criterion = nn.NLLLoss()
-        self.device = device
-
-        print(self.encoder)
-        print(self.decoder)
-
-
-    def train_step(self, input_tensor, optimizer, teacher_forcing_ratio):
-        encoder_hidden = self.encoder.init_hidden()
-
-        optimizer.zero_grad()
-
-        encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
-        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
-
-        loss = sum(self.criterion(output, input) for output, input in zip(decoder_outputs, input_tensor[0]))
-
-        ideal_stops = [[0] for i in range(len(input_tensor[0]) - 1)] + [[1]]
-        ideal_stops = torch.tensor(ideal_stops, dtype=torch.float, device=device)
-        loss += sum(self.stop_criterion(output, input) for output, input in zip(stops, ideal_stops))
-        loss.backward()
-        optimizer.step()
-
-        avg_loss = float(loss.item()) / input_tensor.size(0)
-
-        return avg_loss, decoder_outputs
-
-
-    def train(self, iterations, print_every=500, validate_every=50000,
-              learning_rate=0.0001, teacher_forcing_ratio=0.5):
-
-        optimizer = optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()),
-                               lr=learning_rate)
-
-        print_loss_total = 0  # Reset every print_every
-        for iteration in range(iterations):
-
-            for (i, input_tensor) in enumerate(train_loader):
-
-                loss, decoder_output = self.train_step(input_tensor, optimizer, teacher_forcing_ratio)
-                print_loss_total += loss
-
-                if i > 0 and i % print_every == 0:
-                    print_loss_avg = print_loss_total / print_every
-                    print_loss_total = 0
-
-                    input_text = self.dataset.unembed(input_tensor)
-                    decoder_output_text = self.dataset.unembed(torch.stack(decoder_output))
-
-                    print('{0:d} {1:d} {2:.10f}'.format(iteration, i, print_loss_avg))
-
-                    print(input_text)
-                    print(decoder_output_text)
-                    print(' ', flush=True)
-
-                    if VISDOM:
-                        vis.text('{} => {}'.format(input_text, decoder_output_text))
-
-
-                if i > 0 and i % validate_every == 0:
-                    self.validate(self.dataset, validation_loader, print_every)
-
-            self.validate(dataset, validation_loader)
-
-    def validation_step(self, input_tensor, criterion):
-        encoder_hidden = self.encoder.init_hidden()
-
-        encoder_outputs, encoder_hidden = self.encoder.forward(input_tensor, encoder_hidden)
-        decoder_outputs, stops = self.decoder.forward(encoder_outputs, encoder_hidden)
-
-        loss = sum(self.criterion(output, input) for output, input in zip(decoder_outputs, input_tensor[0]))
-
-        ideal_stops = [[0] for i in range(len(input_tensor[0]) - 1)] + [[1]]
-        ideal_stops = torch.tensor(ideal_stops, dtype=torch.float, device=device)
-        loss += sum(self.stop_criterion(output, input) for output, input in zip(stops, ideal_stops))
-
-        avg_loss = float(loss.item()) / input_tensor.size(0)
-
-        return decoder_outputs, avg_loss
-
-
-    def validate(self, data, criterion, print_every):
-        print("VALIDATING")
-
-        total_validation_loss = 0
-
-        with torch.no_grad():
-            for (i, input_tensor) in enumerate(validation_loader):
-                decoder_output, loss = self.validation_step(input_tensor, criterion)
-                total_validation_loss += loss
-
-                if i > 0 and i % print_every == 0:
-                    print('>',self.dataset.unembed(input_tensor))
-                    print('<', self.dataset.unembed(torch.stack(decoder_output)))
-                    print('loss ', loss)
-                    print(' ', flush=True)
-
-        print("AVERAGE VALIDATION LOSS: {}".format(total_validation_loss / len(validation_loader)))
-
-
-
-
 model = Seq2Seq(dataset, train_loader, validation_loader, test_loader, device)
 
-model.train(iterations=5, print_every=1000)
+model.train(epochs=5, print_every=500)
 
 
 
