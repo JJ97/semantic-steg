@@ -22,6 +22,8 @@ credentials.py
 *.run.xml
 *.mtree.py
 *.Rapp.history
+*.p.tar
+word2vec*
 
 million_tracks.db
 million_tracks.db-journal
