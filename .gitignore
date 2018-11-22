@@ -23,6 +23,8 @@ credentials.py
 *.mtree.py
 *.Rapp.history
 *.p.tar
+*.p
+*.hdf5
 word2vec*
 
 million_tracks.db
