@@ -5,7 +5,6 @@ import random
 import re
 import time
 import h5py
-import hashlib
 
 import numpy as np
 import pandas as pd
@@ -18,7 +17,6 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torch.distributions.normal import Normal
 from torch.utils.data.sampler import Sampler, SubsetRandomSampler
 from thinknook import ThinkNook
-import plotly.graph_objs as ago
 
 package_directory = os.path.dirname(os.path.abspath("__file__"))
 
@@ -31,65 +29,13 @@ TRAIN_TEST_SPLIT = 0.975
 VALIDATION_TEST_SPLIT = 0.8
 BATCH_SIZE = 64
 
-NAME = 'aaee_reparam_anneal4'
+NAME = 'dubs2_noreparam_batch64_00015in10mil'
 
 DEBUG = False
 VISDOM = True
 SAVE_CHECKPOINT = True
 RESUME_FROM = ''
-EVALUATE_FROM = 'aaee_reparam_anneal4'
-
-
-
-def std_mean_plot(iters, means, stds, plottitle=None, xlabel='x', ylabel='y', curvenames=None):
-    # plotly's default colours
-    colors = ((31, 119, 180, 0.5),  # muted blue
-              (255, 127, 14, 0.5),  # safety orange
-              (44, 160, 44, 0.5),  # cooked asparagus green
-              (214, 39, 40, 0.5),  # brick red
-              (148, 103, 189, 0.5),  # muted purple
-              (140, 86, 75, 0.5),  # chestnut brown
-              (227, 119, 194, 0.5),  # raspberry yogurt pink
-              (127, 127, 127, 0.5),  # middle gray
-              (188, 189, 34, 0.5),  # curry yellow-green
-              (23, 190, 207, 0.5))  # blue-teal
-    plotdata = []
-    means = np.array(means)
-    stds = np.array(stds)
-    lowdata = means-stds
-    highdata = means+stds
-    # for i in range(len(means)):
-    trace = ago.Scatter(
-        x=iters,
-        y=lowdata,
-        fill='none',
-        mode='lines',
-        opacity=0.0,
-        line={'color': 'rgba{}'.format(colors[0%10][:-1] + (0.0,))},
-        showlegend=False)
-    plotdata.append(trace)
-    trace = ago.Scatter(
-        x=iters,
-        y=highdata,
-        mode='lines',
-        fill='tonexty',
-        opacity=0.0,
-        fillcolor='rgba{}'.format(colors[0%10]),
-        line={'color': 'rgba{}'.format(colors[0 % 10][:-1] + (0.0,))},
-        showlegend=False)
-    plotdata.append(trace)
-    trace = ago.Scatter(
-        x=iters,
-        y=means,
-        fill=None,
-        mode='lines',
-        line={'color' : 'rgb{}'.format(colors[0%10][:-1])},
-        name=plottitle)
-    plotdata.append(trace)
-    plot_layout = ago.Layout(title=plottitle,
-                            xaxis={'title':xlabel},
-                            yaxis={'title':ylabel})
-    return ago.Figure(data=plotdata, layout=plot_layout)
+EVALUATE_FROM = ''
 
 
 def dprint(s):
@@ -153,11 +99,11 @@ class Encoder(nn.Module):
         self.gru = nn.GRU(input_size=401, hidden_size=self.hidden_size, bidirectional=bidirectional
                           ,num_layers=self.layers, dropout=0.4)
         self.hidden2mean = nn.Linear(hidden_size * self.hidden_factor, latent_size)
-        self.hidden2logv = nn.Linear(hidden_size * self.hidden_factor, latent_size)
+        # self.hidden2logv = nn.Linear(hidden_size * self.hidden_factor, latent_size)
 
         self.device = device
 
-    def forward(self, input, hidden, lengths, stretch_factor=1):
+    def forward(self, input, hidden, lengths):
         # dprint('hidden {} = {}'.format(hidden.size(), hidden))
         # takes input of shape (seq_len, batch, input_size)
         input = pack_padded_sequence(input, list(lengths.data))
@@ -174,19 +120,19 @@ class Encoder(nn.Module):
         # output shape of seq_len, batch, num_directions * hidden_size
         # dprint('hidden {} = {}'.format(hidden.size(), hidden))
 
-        latent = self.reparameterize(hidden, stretch_factor=stretch_factor)
+        latent = self.reparameterize(hidden)
         # dprint('output {} = {}'.format(output.size(), output))
         return output, latent
 
-    def reparameterize(self, hidden, stretch_factor=1):
+    def reparameterize(self, hidden):
         mean = self.hidden2mean(hidden)
-        # return mean
-        logv = self.hidden2logv(hidden)
-        std = torch.exp(0.5 * logv)
+        return mean
+        # logv = self.hidden2logv(hidden)
+        # std = torch.exp(0.5 * logv)
         #
-        z = torch.randn([BATCH_SIZE, self.latent_size], device=self.device)
-        z = z * std * stretch_factor + mean
-        return z
+        # z = torch.randn([BATCH_SIZE, self.latent_size], device=self.device)
+        # z = z * std + mean
+        # return z
 
     def init_hidden(self):
         s = 2 if self.bidirectional else 1
@@ -312,59 +258,57 @@ class PriorDiscriminator(nn.Module):
         x = self.activation(x)
         return x
 
-# #
-# class OutputDiscriminator(nn.Module):
-#     def __init__(self, hidden_size, layers, device, bidirectional=False, clip=None):
-#         super(OutputDiscriminator, self).__init__()
-#         self.hidden_size = hidden_size
-#         self.bidirectional = bidirectional
-#         self.layers = layers
-#         self.clip = clip
 #
-#         self.hidden_factor = (2 if self.bidirectional else 1) * self.layers
-#
-#         self.gru = nn.GRU(input_size=401, hidden_size=self.hidden_size, bidirectional=bidirectional
-#                           ,num_layers=self.layers, dropout=0.4)
-#         self.hidden2out = nn.Linear(hidden_size * self.hidden_factor, 1)
-#         self.activation = nn.Sigmoid()
-#
-#         self.device = device
-#
-#     def forward(self, input, hidden):
-#         # dprint('hidden {} = {}'.format(hidden.size(), hidden))
-#         # takes input of shape (seq_len, batch, input_size)
-#         # input = pack_padded_sequence(input, list(lengths.data))
-#         _, hidden = self.gru(input, hidden)
-#         hidden = clip_grad(hidden, -self.clip, self.clip)
-#
-#         if self.bidirectional or self.layers > 1:
-#             # flatten hidden state
-#             s = (2 if self.bidirectional else 1)
-#             hidden = hidden.view(BATCH_SIZE, self.hidden_size * self.hidden_factor)
-#         else:
-#             hidden = hidden.squeeze()
-#
-#         # output shape of seq_len, batch, num_directions * hidden_size
-#         # dprint('hidden {} = {}'.format(hidden.size(), hidden))
-#
-#         output = self.hidden2out(hidden)
-#         output = self.activation(output)
-#         # dprint('output {} = {}'.format(output.size(), output))
-#         return output
-#
-#     def init_hidden(self):
-#         s = 2 if self.bidirectional else 1
-#         # num_layers * num_directions, batch, hidden_size
-#         return torch.zeros(s * self.layers, BATCH_SIZE, self.hidden_size, device=self.device)
-#
+class OutputDiscriminator(nn.Module):
+    def __init__(self, hidden_size, layers, device, bidirectional=False, clip=None):
+        super(OutputDiscriminator, self).__init__()
+        self.hidden_size = hidden_size
+        self.bidirectional = bidirectional
+        self.layers = layers
+        self.clip = clip
+
+        self.hidden_factor = (2 if self.bidirectional else 1) * self.layers
+
+        self.gru = nn.GRU(input_size=401, hidden_size=self.hidden_size, bidirectional=bidirectional
+                          ,num_layers=self.layers, dropout=0.4)
+        self.hidden2out = nn.Linear(hidden_size * self.hidden_factor, 1)
+        self.activation = nn.Sigmoid()
+
+        self.device = device
+
+    def forward(self, input, hidden):
+        # dprint('hidden {} = {}'.format(hidden.size(), hidden))
+        # takes input of shape (seq_len, batch, input_size)
+        # input = pack_padded_sequence(input, list(lengths.data))
+        _, hidden = self.gru(input, hidden)
+        hidden = clip_grad(hidden, -self.clip, self.clip)
+
+        if self.bidirectional or self.layers > 1:
+            # flatten hidden state
+            s = (2 if self.bidirectional else 1)
+            hidden = hidden.view(BATCH_SIZE, self.hidden_size * self.hidden_factor)
+        else:
+            hidden = hidden.squeeze()
+
+        # output shape of seq_len, batch, num_directions * hidden_size
+        # dprint('hidden {} = {}'.format(hidden.size(), hidden))
+
+        output = self.hidden2out(hidden)
+        output = self.activation(output)
+        # dprint('output {} = {}'.format(output.size(), output))
+        return output
+
+    def init_hidden(self):
+        s = 2 if self.bidirectional else 1
+        # num_layers * num_directions, batch, hidden_size
+        return torch.zeros(s * self.layers, BATCH_SIZE, self.hidden_size, device=self.device)
+
 
 class Seq2SeqGAN:
-    def __init__(self, weight_matrix, index2word, train_loader, validation_loader, test_loader, device, eval=False):
+    def __init__(self, weight_matrix, index2word, train_loader, validation_loader, test_loader, device):
         self.train_loader = train_loader
         self.validation_loader = validation_loader
         self.test_loader = test_loader
-
-        self.eval = eval
 
         self.weight_matrix = weight_matrix
         self.i2w = index2word
@@ -386,15 +330,9 @@ class Seq2SeqGAN:
                                bidirectional=self.bidirectional, clip=5).to(device)
         self.decoder = Decoder(self.decoder_hidden_size, self.latent_size, self.decoder_layers, device=device,
                                bidirectional=self.bidirectional, clip=5).to(device)
-
-
-        if eval:
-            self.weight_matrix = self.weight_matrix.to(device)
-
-        if not self.eval:
-            self.prior_discriminator = PriorDiscriminator(self.latent_size, self.latent_size, device=device).to(device)
-        # self.output_discriminator = OutputDiscriminator(self.output_discriminator_hidden_size, layers=1,
-        #                                                 device=device, bidirectional=True, clip=5).to(device)
+        self.prior_discriminator = PriorDiscriminator(self.latent_size, self.latent_size, device=device).to(device)
+        self.output_discriminator = OutputDiscriminator(self.output_discriminator_hidden_size, layers=1,
+                                                        device=device, bidirectional=True, clip=5).to(device)
 
         self.criterion = nn.MSELoss(reduction='sum')
         self.bce = nn.BCELoss()
@@ -403,9 +341,8 @@ class Seq2SeqGAN:
         print(self.embedder)
         print(self.encoder)
         print(self.decoder)
-        if not self.eval:
-            print(self.prior_discriminator)
-        # print(self.output_discriminator)
+        print(self.prior_discriminator)
+        print(self.output_discriminator)
 
     def print_step(self, input_tensor, lengths, decoder_outputs, l1, l2, l3, epoch, i):
 
@@ -439,36 +376,21 @@ class Seq2SeqGAN:
         unmasked_count = torch.nonzero(mask).size(0)
         l1 = self.criterion(decoder_outputs, cropped_input) / unmasked_count
 
-        # GAN bits
-        d_prior_fake = self.prior_discriminator.forward(hidden)
-        # # generator loss
-        l2 = self.bce(d_prior_fake.mean(), torch.ones(1)[0].to(device))
-
+        # # GAN bits
+        # d_prior_fake = self.prior_discriminator.forward(hidden)
+        # # # generator loss
+        # l2 = self.bce(d_prior_fake.mean(), torch.ones(1)[0].to(device))
+        #
         # d_output_hidden = self.output_discriminator.init_hidden()
         # d_output_fake = self.output_discriminator.forward(decoder_outputs, d_output_hidden)
         # # generator loss
         # l3 = self.bce(d_output_fake.mean(), torch.ones(1)[0].to(device))
-
-        return l1, l2, l2, hidden
+        #
+        # return l1, l2, l3, hidden
+        return l1
         # return l1, l1, l1, hidden
-    #
-    # def calc_prior_gradient_penalty(self, real_data, fake_data, real_d, fake_d, lmbda=1):
-    #     alpha = torch.rand(((BATCH_SIZE, 1))).to(device)
-    #
-    #     interpolates = alpha.expand_as(real_data) * real_data + ((1 - alpha.expand_as(real_data)) * fake_data)
-    #     interpolates = interpolates.to(device)
-    #     interpolates.requires_grad = True
-    #
-    #     disc_interpolates = self.prior_discriminator.forward(interpolates)
-    #     dist = ((real_data - fake_data) ** 2).sum(1) ** 0.5
-    #     dist = dist.view(BATCH_SIZE, 1)
-    #     lip_est1 = (fake_d - disc_interpolates).abs() / (alpha * dist + 1e-8)
-    #     lip_est2 = (real_d - disc_interpolates).abs() / ((1.0 - alpha) * dist + 1e-8)
-    #     lip_loss = 0.5 * lmbda * (
-    #         ((1.0 - lip_est1) ** 2).mean(0).view(1) + ((1.0 - lip_est2) ** 2).mean(0).view(1))
-    #     return lip_loss
 
-    def calc_prior_gradient_penalty(self, real_data, fake_data, real_d, fake_d, lmbda=10):
+    def calc_gradient_penalty(D, real_data, fake_data, lmbda=10):
         alpha = torch.rand_like(real_data).to(device)
         interpolates = alpha * real_data + ((1 - alpha) * fake_data)
         interpolates = interpolates.to(device)
@@ -482,25 +404,6 @@ class Seq2SeqGAN:
         return gradient_penalty
 
 
-    def calc_output_gradient_penalty(self, real_data, fake_data, real_d, fake_d, lmbda=1):
-        alpha = torch.rand(((BATCH_SIZE, 1))).to(device)
-
-        interpolates = alpha.expand_as(real_data) * real_data + ((1 - alpha.expand_as(real_data)) * fake_data)
-        interpolates = interpolates.to(device)
-        interpolates.requires_grad = True
-        # disc_interpolates = self.discriminator(interpolates)
-
-        d_output_hidden = self.output_discriminator.init_hidden()
-        disc_interpolates = self.output_discriminator.forward(interpolates, d_output_hidden)
-
-        dist = ((real_data - fake_data) ** 2).sum(2).sum(0) ** 0.5
-        dist = dist.view(BATCH_SIZE, 1)
-        lip_est1 = (fake_d - disc_interpolates).abs() / (alpha * dist + 1e-8)
-        lip_est2 = (real_d - disc_interpolates).abs() / ((1.0 - alpha) * dist + 1e-8)
-        lip_loss = 0.5 * lmbda * (
-            ((1.0 - lip_est1) ** 2).mean(0).view(1) + ((1.0 - lip_est2) ** 2).mean(0).view(1))
-        return lip_loss
-
     def get_discriminator_loss(self, hidden, input_seq, output_seq):
         m = Normal(torch.tensor([0.0]), torch.tensor([1.0]))
         real_gaussian = m.sample(hidden.size()).to(self.device)
@@ -511,28 +414,28 @@ class Seq2SeqGAN:
 
         l_prior_real = self.bce(d_prior_real.mean(), torch.ones(1)[0].to(device))
         l_prior_fake = self.bce(d_prior_fake.mean(), torch.zeros(1)[0].to(device))
-        grad_penalty_prior = self.calc_prior_gradient_penalty(real_gaussian.data, hidden.data,
+        grad_penalty_prior = self.calc_gradient_penalty(real_gaussian.data, hidden.data,
                                                                d_prior_real, d_prior_fake, lmbda=1)
 
         l4 = (l_prior_real + l_prior_fake + grad_penalty_prior)
-        #
-        # d_output_hidden = self.output_discriminator.init_hidden()
-        # d_output_real = self.output_discriminator.forward(input_seq.detach(), d_output_hidden)
-        #
-        # d_output_hidden = self.output_discriminator.init_hidden()
-        # d_output_fake = self.output_discriminator.forward(output_seq.detach(), d_output_hidden)
-        #
-        # l_output_real = self.bce(d_output_real.mean(),  torch.ones(1)[0].to(device))
-        # l_output_fake = self.bce(d_output_fake.mean(), torch.zeros(1)[0].to(device))
-        # grad_penalty_output = self.calc_output_gradient_penalty(input_seq.data, output_seq.data,
-        #                                                         d_output_real, d_output_fake, lmbda=1)
-        #
-        # l5 = (l_output_real + l_output_fake + grad_penalty_output)
-        return l4, l4
+
+        d_output_hidden = self.output_discriminator.init_hidden()
+        d_output_real = self.output_discriminator.forward(input_seq.detach(), d_output_hidden)
+
+        d_output_hidden = self.output_discriminator.init_hidden()
+        d_output_fake = self.output_discriminator.forward(output_seq.detach(), d_output_hidden)
+
+        l_output_real = self.bce(d_output_real.mean(),  torch.ones(1)[0].to(device))
+        l_output_fake = self.bce(d_output_fake.mean(), torch.zeros(1)[0].to(device))
+        grad_penalty_output = self.calc_output_gradient_penalty(input_seq.data, output_seq.data,
+                                                                d_output_real, d_output_fake, lmbda=1)
+
+        l5 = (l_output_real + l_output_fake + grad_penalty_output)
+        return l4, l5
         # return l4, l4
 
     def train_step(self, input_tensor, lengths, optimizer_gen, optimizer_disc, teacher_forcing_p, word_dropout_rate, lambda_g,
-                   disc_iters=5, phase='both'):
+                   disc_iters=10, phase='both'):
         encoder_hidden = self.encoder.init_hidden()
 
         optimizer_gen.zero_grad()
@@ -543,38 +446,42 @@ class Seq2SeqGAN:
         unfreeze(self.encoder)
         unfreeze(self.decoder)
         freeze(self.prior_discriminator)
-        # freeze(self.output_discriminator)
+        freeze(self.output_discriminator)
 
-        # print('encoder')
+        alpha = 0.5 - (torch.rand((BATCH_SIZE, self.latent_size)) - 0.5).abs()
+
+
         embedded_input = self.embedder.forward(input_tensor)
         encoder_outputs, encoder_hidden = self.encoder.forward(embedded_input, encoder_hidden, lengths)
         encoder_outputs, _ = pad_packed_sequence(encoder_outputs)
-        # print('decoder')
+
+        encoder_hidden_mix = alpha * encoder_hidden + (1 - alpha) * encoder_hidden[::-1, :]
+
         decoder_outputs = self.decoder.forward(encoder_outputs, encoder_hidden, teacher_forcing_p, embedded_input,
+                                               word_dropout_rate)
+        decoder_mix_outputs = self.decoder.forward(encoder_outputs, encoder_hidden_mix, teacher_forcing_p, embedded_input,
                                                word_dropout_rate)
 
         # resize input to match decoder output (due to pre-empting decoder)
         cropped_input = embedded_input[:decoder_outputs.size(0), :, :]
-        # print('loss')
-        l1, l2, l3, hidden = self.get_loss(cropped_input, encoder_hidden, lengths, decoder_outputs)
-        # print('optim')
-        # loss_gen = l1 * 0.1 + l2 * lambda_g + l3 * 0.0025
-        loss_gen = l1 + l2 * lambda_g
-        loss_gen.backward()
-        optimizer_gen.step()
+        l1 = self.get_loss(cropped_input, encoder_hidden, lengths, decoder_outputs)
 
+        loss_disc = tf.reduce_mean(
+            tf.square(disc(decode_mix) - alpha[:, 0, 0, 0]))
+
+        l2 = self.discriminator(d)
 
 
         freeze(self.encoder)
         freeze(self.decoder)
-        # unfreeze(self.output_discriminator)
+        unfreeze(self.output_discriminator)
         unfreeze(self.prior_discriminator)
 
 
         for i in range(disc_iters):
             optimizer_disc.zero_grad()
             l4, l5 = self.get_discriminator_loss(hidden, cropped_input, decoder_outputs)
-            loss_disc = l4 * lambda_g
+            loss_disc = l4 * lambda_g + l5 * lambda_g
             # loss_disc = l4 * lambda_g
             loss_disc.backward()
             optimizer_disc.step()
@@ -584,20 +491,16 @@ class Seq2SeqGAN:
         # return l1.item(), l2.item(), l3.item(), l4.item(), l5.item(), decoder_outputs.detach(), embedded_input.detach()
 
     def train(self, optimizer_gen, optimizer_disc, epochs=1, print_every=500, validate_every=50000,
-              initial_teacher_forcing_p=0.8, final_teacher_forcing_p=0.1, teacher_force_decay=0.0000003,
+              initial_teacher_forcing_p=0.0, final_teacher_forcing_p=0.0, teacher_force_decay=0.0000003,
               word_dropout_rate=0.5, best_validation_loss=np.inf, start_at=0, final_lambda_g = 0.00015,
               lambda_g_step= 0.00015/10000000):
 
         print('USING: {}'.format(self.device))
 
         validations_since_best = 0
-
-        means = [[], [], [], [], [], []]
-        stds = [[], [], [], [], [], []]
-        ce_vals = [[], [], [], [], []]
-        iters = []
         for epoch in range(epochs):
 
+            print_l1_total, print_l2_total, print_l3_total, print_l4_total, print_l5_total = 0, 0, 0, 0, 0
 
             for i, (input_tensor, lengths) in enumerate(train_loader):
                 freeze(self.embedder)
@@ -613,54 +516,56 @@ class Seq2SeqGAN:
                 teacher_forcing_p = max(final_teacher_forcing_p,
                                         initial_teacher_forcing_p - teacher_force_decay * samples_processed)
                 lambda_g = min(final_lambda_g, lambda_g_step * samples_processed)
-                # lambda_g = 0.1
                 # lambda_g = 0.0035 if random.random() < 0.9 else 0
 
                 l1, l2, l3, l4, l5, decoder_outputs, embedded_input = self.train_step(input_tensor, lengths,
                                                                               optimizer_gen, optimizer_disc,
                                                                               teacher_forcing_p, word_dropout_rate,
                                                                               lambda_g)
-                for ii, l in enumerate((l1, l2, l3, l4, l5)):
-                    ce_vals[ii].append(l)
+                print_l1_total += l1
+                print_l2_total += l2
+                print_l3_total += l3
+                print_l4_total += l4
+                print_l5_total += l5
 
-                    # dprint(samples_processed)
+                # dprint(samples_processed)
                 if i > 0 and i % print_every == 0:
-                    for ii, vals in enumerate(ce_vals):
-                        means[ii].append(np.mean(np.array(vals)))
-                        stds[ii].append(np.std(np.array(vals)))
-                    for ii in range(5):
-                        ce_vals[ii] = []
-                    iters.append(samples_processed)
+                    print_l1_avg = print_l1_total / print_every
+                    print_l2_avg = print_l2_total / print_every
+                    print_l3_avg = print_l3_total / print_every
+                    print_l4_avg = print_l4_total / print_every
+                    print_l5_avg = print_l5_total / print_every
 
                     self.print_step(embedded_input, lengths, decoder_outputs,
-                                    means[0][-1], means[1][-1], means[2][-1],  epoch, i)
+                                    print_l1_avg, print_l2_avg, print_l3_avg,  epoch, i)
+                    print_l1_total, print_l2_total, print_l3_total, print_l4_total, print_l5_total = 0, 0, 0, 0, 0
 
-                    for mean, std, l in zip(means, stds,
+                    for y, l in zip([print_l1_avg, print_l2_avg, print_l3_avg, print_l4_avg, print_l5_avg],
                                     ['reconstruction', 'prior generator', 'output generator', 'prior discriminator',
                                      'output discriminator']):
-
-                        # print(std)
-                        mean_plot = std_mean_plot(iters, mean, std, plottitle=l, xlabel='samples processed', ylabel='MSE', curvenames=None)
-                        vis.plotlyplot(mean_plot, win=l)
+                        # noinspection PyArgumentList
+                        vis.line(X=np.array([int(samples_processed)]),
+                                 Y=np.array([[float(y)]]),
+                                 win=l,
+                                 opts=dict(title=l, xlabel='samples processed', ylabel='loss', legend=['train']),
+                                 update='append')
 
                 if i > 0 and i % validate_every == 0:
-                    val_l1s = self.validate(validation_loader, print_every, samples_processed)
-                    val_l1s = np.array(val_l1s)
-                    means[5].append(val_l1s.mean())
-                    stds[5].append(val_l1s.std())
+                    val = self.validate(validation_loader, print_every, samples_processed)
+
                     # noinspection PyArgumentList
-                    mean_plot = std_mean_plot(iters, means[5], stds[5], plottitle='validation loss', xlabel='samples processed', ylabel='MSE',
-                                              curvenames=None)
-                    vis.plotlyplot(mean_plot, win='validation loss')
+                    vis.line(X=np.array([int(samples_processed)]),
+                             Y=np.array([[float(val / len(validation_loader))]]),
+                             win='validation_loss',
+                             opts=dict(title="validation loss", xlabel='samples processed', ylabel='loss', legend=['val']),
+                             update='append')
 
-
-                    if means[5][-1] < best_validation_loss:
-                        best_validation_loss = means[5][-1]
+                    if val < best_validation_loss:
+                        best_validation_loss = val
                         validations_since_best = 0
 
-
                         save_checkpoint(self.encoder, self.decoder, self.prior_discriminator,
-                                        self.prior_discriminator,
+                                        self.output_discriminator,
                                         optimizer_gen, optimizer_disc, samples_processed,
                                         best_validation_loss)
                         # save_checkpoint(self.encoder, self.decoder, self.prior_discriminator,
@@ -709,7 +614,6 @@ class Seq2SeqGAN:
 
         total_l1_loss, total_l2_loss, total_l3_loss = 0, 0, 0
 
-        l1s = []
         with torch.no_grad():
             hiddens = []
 
@@ -722,7 +626,6 @@ class Seq2SeqGAN:
 
                 l1, l2, decoder_outputs, hidden, embedded_input = self.validation_step(input_tensor, lengths)
                 hiddens.append(hidden)
-                l1s.append(l1)
                 total_l1_loss += l1
                 total_l2_loss += l2
 
@@ -743,11 +646,11 @@ class Seq2SeqGAN:
 
 
         print("AVERAGE VALIDATION LOSS: {}".format((total_l1_loss) / len(validation_loader)))
-        return l1s
+        return total_l1_loss
 
     def unembed(self, decoder_outputs, length=MAX_LENGTH):
 
-        indices = [torch.argmax(torch.mm(self.weight_matrix, torch.unsqueeze(d, 1))) for d in decoder_outputs]
+        indices = [torch.argmax(torch.mm(self.weight_matrix, torch.unsqueeze(d, 1).to('cpu'))) for d in decoder_outputs]
         return ' '.join([self.i2w[i] for i in indices])
 
 class BucketSampler(Sampler):
@@ -825,11 +728,11 @@ def go():
         model.encoder.load_state_dict(torch.load('{}_encoder.p.tar'.format(RESUME_FROM), map_location='cuda'))
         model.decoder.load_state_dict(torch.load('{}_decoder.p.tar'.format(RESUME_FROM), map_location='cuda'))
         model.prior_discriminator.load_state_dict(torch.load('{}_disc_prior.p.tar'.format(RESUME_FROM), map_location='cuda'))
-        # model.output_discriminator.load_state_dict(torch.load('{}_disc_output.p.tar'.format(RESUME_FROM), map_location='cuda'))
+        model.output_discriminator.load_state_dict(torch.load('{}_disc_output.p.tar'.format(RESUME_FROM), map_location='cuda'))
         model.encoder.train()
         model.decoder.train()
         model.prior_discriminator.train()
-        # model.output_discriminator.train()
+        model.output_discriminator.train()
 
         x = torch.load('{}.p.tar'.format(RESUME_FROM), map_location='cpu')
         samples_processed = x['samples_processed'] if 'samples_processed' in x else 0
@@ -846,12 +749,11 @@ def go():
     elif EVALUATE_FROM:
         model.encoder.load_state_dict(torch.load('{}_encoder.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
         model.decoder.load_state_dict(torch.load('{}_decoder.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
-        # model.prior_discriminator.load_state_dict(torch.load('{}_disc_prior.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
-        # model.output_discriminator.load_state_dict(torch.load('{}_disc_output.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
-        #
-        # optimizer_gen.load_state_dict(torch.load('{}_optimizer_gen.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
-        # optimizer_disc.load_state_dict(torch.load('{}_optimizer_disc.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
+        model.prior_discriminator.load_state_dict(torch.load('{}_disc_prior.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
+        model.output_discriminator.load_state_dict(torch.load('{}_disc_output.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
 
+        optimizer_gen.load_state_dict(torch.load('{}_optimizer_gen.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
+        optimizer_disc.load_state_dict(torch.load('{}_optimizer_disc.p.tar'.format(EVALUATE_FROM), map_location='cuda'))
 
     else:
         model.train(optimizer_gen, optimizer_disc, epochs=50000,
@@ -917,7 +819,6 @@ def hidden_hists(j ,k, l, hiddens=None, label="hists"):
             for x in range(BATCH_SIZE):
                 first_unit = h[x, l]
                 qs.append(float(first_unit))
-        print(len(qs))
     else:
         for (i, [input_tensor, lengths]) in enumerate(validation_loader):
 
@@ -937,56 +838,6 @@ def hidden_hists(j ,k, l, hiddens=None, label="hists"):
     torch.tensor(qs).view(-1)
     vis.histogram(qs, opts=dict(title=label))
 
-def get_payload(t, n=4):
-    payload = hashlib.sha256(str(t).encode()).hexdigest()[:2]
-    payload = bin(int(payload,16))[2:].zfill(8)[:n]
-    return int(payload, 2)
-
-def sample(t, scale=0.1, steps=10, stretch_factor=1, payload=None, n=4):
-    t = '<s> ' + t + ' </s>'
-    with torch.no_grad():
-        unk_idx = i2w.index(UNK)
-        t_enc = torch.tensor([w2i[w] if w in w2i else unk_idx for w in t.lower().strip().split()], dtype=torch.long)
-        i, i_len = dataset.collate([(t_enc, len(t_enc))] * BATCH_SIZE)
-        i = i.to(device)
-        i_len = i_len.to(device)
-
-        em = model.embedder.forward(i)
-        # print(model.unembed(em[:i_len[0], 0, :]))
-
-        for s in range(steps):
-            encoder_hidden = model.encoder.init_hidden()
-            embedded_input = model.embedder.forward(i)
-            encoder_outputs, encoder_hidden = model.encoder.forward(embedded_input, encoder_hidden, i_len, stretch_factor=stretch_factor)
-            encoder_outputs, _ = pad_packed_sequence(encoder_outputs)
-
-            outputs = model.decoder.forward(encoder_outputs, encoder_hidden, 0, encoder_outputs, 0)
-            for ii in range(BATCH_SIZE):
-                s = model.unembed(outputs[:, ii, :]).strip()
-                if '</>' in s:
-                    stegotext = ' '.join(s[:s.find('</>')].split()[1:])
-                else:
-                    stegotext = ' '.join(s.split()[1:])
-                if get_payload(stegotext, n) == payload:
-                    return stegotext
-
-        return 'N/A'
-
-def get_data(out_file='out', max_length=10000):
-    for n in range(1,5):
-        with open('{}_{}.txt'.format(out_file, n), 'w', buffering=1) as out:
-            i = 0
-            for t in open('para_test.txt', 'r'):
-                t = t.split('\t')[0]
-                payload = random.randint(0, 2**n-1)
-                para = sample(t, n=n, payload=payload)
-                out.write('{}\t{}\t{}\n'.format(i, para, get_payload(para, n)))
-                print(t, para, get_payload(para, n))
-                i += 1
-                if i >= max_length:
-                    break
-
-
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method('forkserver')
 
@@ -1004,8 +855,6 @@ if __name__ == '__main__':
         print('USING: {}'.format(torch.cuda.get_device_name(0)))
 
     i2w =  torch.load('i2w.p.tar')
-    if EVALUATE_FROM:
-        w2i = {w : i for i,w in enumerate(i2w)}
     weight_matrix = torch.load('weight_matrix.p.tar')
 
 
@@ -1019,17 +868,14 @@ if __name__ == '__main__':
 
     train_loader, validation_loader, test_loader = get_dataloaders(dataset)
 
-    model = Seq2SeqGAN(weight_matrix, i2w, train_loader, validation_loader, test_loader, device, eval=EVALUATE_FROM != "")
+    model = Seq2SeqGAN(weight_matrix, i2w, train_loader, validation_loader, test_loader, device)
 
-
-    if not EVALUATE_FROM:
-        optimizer_gen = optim.Adam(list(model.encoder.parameters()) + list(model.decoder.parameters()), lr=0.0001)
-        optimizer_disc = optim.Adam(list(model.prior_discriminator.parameters()), lr=0.0001)
-    # optimizer_disc = optim.Adam(list(model.prior_discriminator.parameters())
-    #                             + list(model.output_discriminator.parameters()), lr=0.0001)
+    optimizer_gen = optim.Adam(list(model.encoder.parameters()) + list(model.decoder.parameters()), lr=0.0001)
+    # optimizer_disc = optim.Adam(list(model.prior_discriminator.parameters()), lr=0.00001)
+    optimizer_disc = optim.Adam(list(model.prior_discriminator.parameters())
+                                + list(model.output_discriminator.parameters()), lr=0.00001)
     go()
 
-    get_data( out_file='aae')
     #
 # for i, t in enumerate(dataset.samples):
 #     vec = np.zeros((len(t) + 2,), dtype=np.uint32)

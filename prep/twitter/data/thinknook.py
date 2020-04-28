@@ -50,6 +50,8 @@ class ThinkNook(DataSet):
     def normalize_spaces(self, tweet):
         return re.sub(r' +', r' ', tweet)
 
+    re.sub(r'http\S* ', r'https ', t)
+
     def generate_wordlist(self, samples):
         print("...generating wordlist")
         word_counts = defaultdict(int)
