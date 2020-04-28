@@ -1,0 +1,36 @@
+abstract
+    - who knows
+introduction
+    - what is lexical steg
+    - what is it used for
+    - whats wrong with current methods
+    - oldies
+    - argument for ml 
+    - contributions
+
+introduction
+    - why is the work important?
+        - ties to encryption, safety, part of any good security policy, watermarking
+    - why now?
+        - explosion in ml nlp research
+            - nmt highly successful   
+        - ml applications for image
+    - why can’t you use what exists already?
+        - it sucks ass
+        - nobody has tried it with ml
+    - techniques and viewpoints
+        - approach from a nmt perspective
+            - i.e. goal is english->english translation
+            - essentially create a generative model of text
+                - conditioned on some pre-existing text in order to generate similar output texts
+                - modify this model to embed message during generation (similar approach successful in image steg)
+    - contribution
+        - novel application of adversarial autoencoders to the problem of lexical steganography
+        - better than prior work (hopefully)
+        - model can also be modified for other applications e.g. password cracking, 
+related work
+    1. Can you list (and critically discuss) relevant work?
+    2. Can you organize the different pieces of earlier work
+    into categories? (e.g. having same research direction)
+    3. Can you relate work together and can you relate your
+    work to that of others?

@@ -1,0 +1,256 @@
+commit 5dadc6239bc1bb00f0f50945889a4e8fd389b40b
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Thu Nov 22 15:16:51 2018 +0000
+
+    Reparameterization trick + gpu optimisations
+    
+    Everything is now fast except for the decoder since it takes the previous output as its input
+
+commit 1a4a6c2e76d8f87116505ad445e9f7d952eddff9
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Sat Nov 3 19:49:48 2018 +0000
+
+    Visdom graphing + word dropout + checkpointing
+    
+    Model seems to be converging well. Now to try adding a GAN to the latent vector.
+
+commit 1ff32a5c97e3447abf9a9e03064fcd0bbe7e565d
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Thu Oct 11 14:47:05 2018 +0100
+
+    remove dropout on encoder
+
+commit 7d1131bea707673f28529f936472bc207567a1c0
+Merge: 0a8dc37 646219e
+Author: John Jennings <john.m.jennings@durham.ac.uk>
+Date:   Thu Oct 11 14:41:39 2018 +0100
+
+    Merge branch 'master' into batch
+
+commit 0a8dc3728ea35e5efff677bfbba362347af88179
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Thu Oct 11 14:36:09 2018 +0100
+
+    merge conf fix
+
+commit f70ab7b9c4c31713f265a33ded62244fb2658756
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Thu Oct 11 13:39:05 2018 +0100
+
+    Added batch support with packing + loss masking
+
+commit 646219e3a18dd2c3c72bb6a0ccec2572460e77ee
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Oct 9 20:23:50 2018 +0100
+
+    bidirectional + dropout
+
+commit e6a9f8520b1c151ccaa0f1280a91aabe82c5c6e9
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Mon Oct 8 13:19:10 2018 +0100
+
+    Lit review done + moved into single file with word embeddings
+
+commit 7b5c6370874a9e5e1f23d6f10068330750af2244
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Wed Sep 26 12:33:43 2018 +0100
+
+    More lit review
+    
+    Started section on different generative models. Discussed possible use of VAEs.
+
+commit cb42ea775fbd139067c763ae2252197039a2a478
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Sep 21 15:01:45 2018 +0100
+
+    Diagrams
+    
+    Drew some diagrams for the structure of the model that I currently have in mind.
+
+commit ac8977d4ffba06bf5932d0eea33edf6e7c8fc9ac
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Thu Sep 20 15:37:32 2018 +0100
+
+    Trying out character-level
+
+commit a1c870422e3d791e497c5f93ed2a12bd370a111c
+Merge: 9d2e814 c07d537
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Wed Sep 19 14:33:24 2018 +0100
+
+    Merge branch 'master' of https://github.com/JJ97/semantic-steg
+
+commit 9d2e81480a1852ef25ce6ade74dec7b946024564
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Wed Sep 19 14:32:31 2018 +0100
+
+    Lit review started
+
+commit c07d53710ca5a1a8473daf3111c143e2c9974032
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Sep 18 15:53:05 2018 +0100
+
+    Adam ftw
+
+commit ce18509bc1e2ebf9b83eefac8f2584b75b228b5e
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Sat Sep 15 14:28:56 2018 +0100
+
+    Reduce max length to 70 + minor changes to validation
+    
+    Max length should be WORD count not char count. So, max of 70 1-char words separated by spaces.
+
+commit f869e070ae9f5ceda65e20122b29895be13b66d1
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Sep 14 15:10:46 2018 +0100
+
+    Validate more often + reduce learning rate over time
+
+commit 33298eebf3a2d11655b6800fcc2e595901f2b1e1
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Sep 14 14:25:35 2018 +0100
+
+    Tried single wider layer. Looks like theres a memory leak somewhere
+
+commit e02d9cdc5075d2f5355c1c26e6ab651c652091cc
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Sep 11 21:57:06 2018 +0100
+
+    Trying more layers
+
+commit b81652d90d486dc639df07d57f14cd7fb6a7dc4a
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Sep 11 21:43:12 2018 +0100
+
+    Minor changes for ncc
+
+commit 8e7f52173a26fb81ded230e032210b22ef27f230
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Sep 11 19:51:42 2018 +0100
+
+    Trying out a seq2seq autoencoder on 1.5mil tweets
+    
+    Much tidier than previous attempts. Starting to understand PyTorch a bit better.
+
+commit cc5d5a8b0f5a8fb368ba4896f8ff2e90fcad684a
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Mon Sep 10 15:33:55 2018 +0100
+
+    Planning
+    
+    Wrote a quick outline of what my current ideas are for the project.
+
+commit dd8e764f7a6e09591660cb4e59f7d1f3e661c0e4
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Jun 29 14:35:31 2018 +0100
+
+    NCC + bib
+    
+    Got the seq2seq model running on ncc. Also made a quick pdf for chris that just prints out all my references
+
+commit cbc763a8d079a3ea8d9a4fe2d68ea3e8cbee7997
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Sat Jun 23 15:22:19 2018 +0100
+
+    More word2vec
+    
+    Read a paper from Google that talks about improvements to word2vec using negative sampling, frequent word subsampling etc. Might be worth training a bespoke word2vec on the twitter corpus to capture meaning within the specific context of twitter.
+
+commit 9b0e086e74c104f19f9da5efda31b971bcfd30ee
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Jun 22 17:53:53 2018 +0100
+
+    Dumb naming conventions
+    
+    Why is DBOW more similar to Skipgram than CBOW?
+
+commit 2a3284b078532565718514aa81e4fa5be1c6f440
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Jun 22 17:08:51 2018 +0100
+
+    I now have internet and can look up what a policy gradient is
+    
+    Personally think that autoencoder > GAN for the purposes of my project but I'm sure Chris can convince me otherwise. Changed the seq2seq model to act as an autoencoder just to see what it will do.
+
+commit f41fe3e8c19e55f6380a8e8a77e1710120fc1709
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Jun 19 15:06:10 2018 +0100
+
+    Found a good textbook
+    
+    Mostly about watermarking which is still useful as its basically a harder version of steg. Does have an entire chapter for both steg and steganalysis, though it is focussed on images.
+
+commit 58df87205bf05f4c1fdf9942e2f7068d31343edd
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Mon Jun 18 19:52:58 2018 +0100
+
+    Oxford to the rescue
+    
+    Paper by an researcher at Oxford has finally shone light on some useful information. Suggests a massive dataset of tweets as well as providing coding theory based approaches to steganalysis and the same sorts of criticism of prior work as ive been dishing out. Looks like this sort of model could be improved a lot with seq2seq or something similar.
+
+commit 2050a738d53662909fe14b59d26859f9a2134323
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Mon Jun 18 18:45:11 2018 +0100
+
+    More reading
+    
+    Added and read through a couple more sources. So many of them do way less than what their title suggests.
+
+commit e451d1aee08f90568276104eebe95b066d196a43
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Mon Jun 18 12:01:57 2018 +0100
+
+    seq2seq reading
+    
+    Read through a few papers on seq2seq. Definitely seems like a promising way to go, especially with the idea of using attention to determine words with a high capacity. One paper adds an adversarial element which seems interesting but the paper itself is poor quality.
+
+commit 823bb0221131dd0326f49557341f3b973646bbae
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Sat Jun 9 11:08:38 2018 +0100
+
+    It works?
+    
+    Trained it on simple set of instances containing "he is", "i am" etc.
+    Seems to perform quite well after about half an hour of training but pretty sure its overfitting big time
+    Quite surprised that a tutorial from the pytorch website doesn't split its training/validation/testing sets...
+
+commit 1d61ba929e34ac514e800ed8e142f32573e0c6dd
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Jun 8 20:48:26 2018 +0100
+
+    Started seq2seq
+    
+    Following the pytorch tutorial on seq2seq: https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
+    So far have file input + sanitisation added, along with a couple of tweaks for caching and filtering data
+
+commit b16311e85e07e993df2d30cd9f90d6578fc9bda0
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Fri Jun 8 12:59:02 2018 +0100
+
+    Changed spec as per Chris
+    
+    Apparently training the basic seq2seq model is going to be quite tricky
+
+commit 0154b6267323d0e8b3f01c3610bb467c6c66ded4
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Jun 5 13:03:39 2018 +0100
+
+    draft spec done
+
+commit 84c316b1b0eed6209ef3842d5f71db590a5c2d5a
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Jun 5 12:02:18 2018 +0100
+
+    how about we actually back up the bibliography this year...
+
+commit 0944383634abff7d79b86d3c9eb62c2680d9e396
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Jun 5 12:01:01 2018 +0100
+
+    bit of reading
+
+commit 6528e0d704777f89ddf997a67b05f68f208e1e1b
+Author: JJ97 <johnmjennings97@gmail.com>
+Date:   Tue Jun 5 10:52:02 2018 +0100
+
+    gitignore
